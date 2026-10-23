@@ -1,0 +1,77 @@
+# Runs the tests on every push and pull request. On pushes to main, also builds the x64 and ARM64
+# packages and publishes them as a GitHub release, versioned 0.1.<run number>.
+name: Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  # Don't cancel a release that's halfway through publishing.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+
+      # The runner has the Windows SDK, which would switch on MSIX packaging; the tests don't need it.
+      - name: Test
+        run: dotnet test -p:EnableMsixTooling=false
+
+  release:
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    env:
+      VERSION: 0.1.${{ github.run_number }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Build packages
+        shell: pwsh
+        run: |
+          foreach ($platform in 'x64', 'ARM64') {
+            $name = "CmdPalLauncher-$env:VERSION-$($platform.ToLowerInvariant())"
+            $folder = "artifacts/$name"
+            ./build/Build-Package.ps1 -Configuration Release -Platform $platform -Version $env:VERSION -OutputDir "$folder/app"
+            Copy-Item build/install.ps1, LICENSE $folder
+            Compress-Archive -Path "$folder/*" -DestinationPath "artifacts/$name.zip"
+          }
+
+      - name: Create release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $notes = @"
+          ## Install
+
+          1. Turn on **Developer Mode** (Settings > System > For developers).
+          2. Download the zip for your PC: **x64** for most PCs, **arm64** for Windows on Arm.
+          3. Extract it, open PowerShell in the extracted folder and run:
+
+             ``````powershell
+             powershell -ExecutionPolicy Bypass -File .\install.ps1
+             ``````
+
+          Command Palette restarts and shows the **Launch Profiles** commands. To remove the extension, run the same command with ``-Uninstall``.
+          "@
+          gh release create "v$env:VERSION" artifacts/*.zip --title "v$env:VERSION" --target "$env:GITHUB_SHA" --notes "$notes" --generate-notes

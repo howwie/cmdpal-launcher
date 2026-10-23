@@ -1,0 +1,13 @@
+bin/
+obj/
+.vs/
+*.user
+AppPackages/
+deploy/
+artifacts/
+
+# Copilot notes from the Command Palette extension template. Only these are ignored,
+# so .github/workflows is still committed.
+.github/copilot-instructions.md
+.github/instructions/
+.github/skills/

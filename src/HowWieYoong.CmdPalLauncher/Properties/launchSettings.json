@@ -1,0 +1,11 @@
+{
+  "profiles": {
+    "CmdPalLauncher (Package)": {
+      "commandName": "MsixPackage",
+      "doNotLaunchApp": true
+    },
+    "CmdPalLauncher (Unpackaged)": {
+      "commandName": "Project"
+    }
+  }
+}
