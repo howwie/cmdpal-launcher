@@ -131,6 +131,8 @@ They don't start processes or touch real windows. `AppLauncher` makes its proces
 
 Releases are versioned `0.1.<workflow run number>`, e.g. tag `v0.1.42`. To move to `0.2` or `1.0`, change `VERSION` in the workflow.
 
+Pushes that only change Markdown files or `LICENSE` don't run the workflow, so they don't create a release. To push any other change without releasing it, put `[skip ci]` in the commit message.
+
 ## profiles.json
 
 The file is at `%LOCALAPPDATA%\CmdPalLauncher\profiles.json` and is created with a sample on first run. It's reloaded whenever you save it, and it may contain `//` comments and trailing commas. Environment variables such as `%USERPROFILE%` are expanded in paths, directories, arguments and commands.

@@ -1,10 +1,14 @@
 # Runs the tests on every push and pull request. On pushes to main, also builds the x64 and ARM64
 # packages and publishes them as a GitHub release, versioned 0.1.<run number>.
+# Pushes that only change documentation don't run at all, so they don't publish a release.
 name: Build
 
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - '**/*.md'
+      - LICENSE
   pull_request:
   workflow_dispatch:
 
