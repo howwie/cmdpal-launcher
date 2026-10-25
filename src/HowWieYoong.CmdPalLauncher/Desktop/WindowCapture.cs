@@ -146,11 +146,16 @@ internal static class WindowCapture
             notes);
     }
 
-    /// <summary>The monitor's name when it's unique, which survives rearranging monitors; otherwise its number.</summary>
+    /// <summary>The "monitor" setting as JSON: the monitor's name when it's unique, which survives rearranging monitors; otherwise its number.</summary>
     public static string MonitorValue(MonitorInfo monitor, IReadOnlyList<MonitorInfo> monitors) =>
-        monitors.Count(m => Is(m.Name, monitor.Name)) == 1
-            ? Json(monitor.Name)
-            : monitor.Number.ToString(CultureInfo.InvariantCulture);
+        IsNameUnique(monitor, monitors) ? Json(monitor.Name) : monitor.Number.ToString(CultureInfo.InvariantCulture);
+
+    /// <summary>The same as <see cref="MonitorValue"/>, as plain text rather than JSON.</summary>
+    public static string MonitorText(MonitorInfo monitor, IReadOnlyList<MonitorInfo> monitors) =>
+        IsNameUnique(monitor, monitors) ? monitor.Name : monitor.Number.ToString(CultureInfo.InvariantCulture);
+
+    private static bool IsNameUnique(MonitorInfo monitor, IReadOnlyList<MonitorInfo> monitors) =>
+        monitors.Count(m => Is(m.Name, monitor.Name)) == 1;
 
     /// <summary>Replaces the longest matching known folder with its environment variable.</summary>
     public static string PortablePath(string path, IReadOnlyList<(string Variable, string Folder)> folders)

@@ -44,9 +44,9 @@ internal sealed class WindowPlacer
     /// <summary>Checks the app's placement settings before it starts, so problems are reported once.</summary>
     public bool Validate(AppEntry app, List<string> failures)
     {
-        if (app.WindowState is { } state && !app.IsMaximized && !string.Equals(state, "normal", StringComparison.OrdinalIgnoreCase))
+        if (app.WindowState is { } state && !app.IsMaximized && !app.IsMinimized && !string.Equals(state, "normal", StringComparison.OrdinalIgnoreCase))
         {
-            failures.Add($"{AppLauncher.DisplayName(app)}: unknown windowState \"{state}\" (use \"normal\" or \"maximized\")");
+            failures.Add($"{AppLauncher.DisplayName(app)}: unknown windowState \"{state}\" (use \"normal\", \"maximized\" or \"minimized\")");
             return false;
         }
 
@@ -156,7 +156,7 @@ internal sealed class WindowPlacer
             return;
         }
 
-        _desktop.PlaceWindow(window.Handle, MonitorLayout.TargetBounds(monitor, app.Bounds, window.Bounds), app.IsMaximized);
+        _desktop.PlaceWindow(window.Handle, MonitorLayout.TargetBounds(monitor, app.Bounds, window.Bounds), app.Show);
     }
 
     private sealed class PendingWindow(AppEntry app, string processName, int timeoutMs)

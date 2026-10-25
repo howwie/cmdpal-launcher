@@ -4,6 +4,16 @@
 
 A PowerToys Command Palette extension that starts a saved set of apps, each with its own arguments and on its own monitor, in one go. For example, a "Development" profile might start Docker Desktop, open Windows Terminal with titled tabs, and open Explorer at your projects folder.
 
+## Why not PowerToys Workspaces?
+
+[PowerToys Workspaces](https://learn.microsoft.com/windows/powertoys/workspaces) also starts a saved set of apps and arranges their windows. Launch Profiles is for when you want more control over what starts and how:
+
+- **Only the apps you choose.** Workspaces captures every open window, and you then remove the ones you don't want. Here you add just the apps you want, one by one, by hand or by capturing a single window.
+- **Editable Windows Terminal tabs.** Each tab's title, folder, profile and command is a setting you can change. With Workspaces, changing Terminal's tabs means arranging them again and re-capturing all your windows.
+- **Apps without a window.** An app that lives in the notification area, a background tool or a script can be part of a profile. Workspaces only knows about apps it can see a window for.
+
+The two can be used side by side.
+
 ## Install
 
 Requirements:
@@ -76,7 +86,7 @@ If your organisation sets the policy through Group Policy, it overrides all thre
 |---|---|
 | **Launch Profiles** | Lists your profiles; the details pane shows what each one starts |
 | **Launch &lt;profile&gt;** | Each profile is also a top-level command, so typing "dev" is enough |
-| **Edit launch profiles** | Opens `profiles.json` |
+| **Edit launch profiles** | Opens the profile editor (see [Editing profiles in Command Palette](#editing-profiles-in-command-palette)). Its More menu opens `profiles.json` in a text editor instead |
 | **Capture window position** | Lists your monitors and open windows. Selecting a window copies a complete app entry that would start that app again and put its window back where it is now (see [Capturing an open window](#capturing-an-open-window)) |
 
 From a shortcut or script. The exe is in `%LOCALAPPDATA%\Programs\CmdPalLauncher` for a release install, or `deploy\x64` when built from source:
@@ -132,6 +142,24 @@ They don't start processes or touch real windows. `AppLauncher` makes its proces
 Releases are versioned `0.1.<workflow run number>`, e.g. tag `v0.1.42`. To move to `0.2` or `1.0`, change `VERSION` in the workflow.
 
 Pushes that only change Markdown files or `LICENSE` don't run the workflow, so they don't create a release. To push any other change without releasing it, put `[skip ci]` in the commit message.
+
+## Editing profiles in Command Palette
+
+**Edit launch profiles** opens an editor, so you don't have to write JSON. It's also available from each profile's More menu on the **Launch Profiles** page.
+
+- **Profiles:** select one to open it. Its More menu has **Move up**, **Move down**, **Duplicate** and **Delete**. **New profile** adds one; names must be unique, because profiles are found, and launched from the command line, by name.
+- **A profile is one form.** The profile's name, description and icon are at the top. A Segoe Fluent icon appears as its code, such as `\uE943`, because the text box can't draw it. A preview is shown beside the field, and the page header shows the icon too. You can type `\uE943`, `U+E943` or just `E943`; the preview updates when you save. An image file used as the icon (.png, .jpg, .gif or .bmp) gets a preview as well. Emoji show in the text box itself.
+- **Each app is a section below that**, showing its name and path. Click the row (▸) to expand it to every option from [App options](#app-options) and [Window placement](#window-placement); click beside the name and path rather than on them (see [Known limitations](#known-limitations)). The **Monitor** dropdown lists the monitors that are connected now; a saved monitor that isn't connected stays selected, so saving never loses it. Windows Terminal entries don't show **Path** or **Window process**: Terminal is always started with `wt.exe`, and its windows always belong to `WindowsTerminal`, Preview and Canary builds included. Values written into `profiles.json` by hand are kept.
+- **An expanded app has Move up, Move down, Duplicate and Delete buttons** at the top of its section. **Add app** and **Add Windows Terminal** are at the bottom of the form, next to **Save**.
+- **Windows Terminal entries** have their tabs inside their section, each with **Move tab up**, **Move tab down** and **Delete tab**, plus **Add tab**.
+- **Every button saves the whole form first**, so nothing you've typed is lost, then does its job. Deletes ask before saving. If anything on the form is invalid, such as an app without a path, nothing is saved and a message names the app or tab.
+- **The page's More menu** has **Launch this profile**, **Add from an open window** (captures a window the same way as [Capture window position](#capturing-an-open-window)), **Show or hide all app settings** and **Open profiles.json**.
+
+Saving from the editor rewrites `profiles.json`:
+
+- **Comments are lost**, because the JSON library can't keep them. Before each save, the previous version is copied to `profiles.json.bak`.
+- **Settings the editor doesn't know about are kept**, and settings that aren't set are left out.
+- **Edits made by hand since the editor last loaded the file are kept too**, because each save re-reads `profiles.json` first. If the file has a JSON error, the editor won't save until you fix it in a text editor.
 
 ## profiles.json
 
@@ -200,7 +228,7 @@ Any app, including `terminal`, can be put on a specific monitor:
   "path": "explorer.exe",
   "arguments": "D:\\Development",
   "monitor": 2,                                   // or "primary", or a name like "DELL U2515H"
-  "windowState": "normal",                        // or "maximized"
+  "windowState": "normal",                        // or "maximized" or "minimized"
   "bounds": { "x": 0, "y": 0, "width": 1280, "height": 1380 }
 }
 ```
@@ -208,7 +236,7 @@ Any app, including `terminal`, can be put on a specific monitor:
 | Key | Description |
 |---|---|
 | `monitor` | `"primary"`; a number counted **left to right** (then top to bottom), starting at 1; or the monitor's model name, e.g. `"DELL U2515H"`. A unique part of a name such as `"U2515H"` also works, as does a device name like `"DISPLAY2"`. A name keeps working if you rearrange your monitors; use a number if two monitors are the same model |
-| `windowState` | `"normal"` or `"maximized"` |
+| `windowState` | `"normal"`, `"maximized"` or `"minimized"`. A minimized window is first moved to its monitor and position, so it restores there |
 | `bounds` | Position and size in pixels, relative to the top-left of the monitor's work area (the screen minus the taskbar). Leave out `width`/`height`, or set them to 0, to keep the window's own size. Without `bounds`, the window is centred on the monitor at its own size |
 | `windowProcess` | The process that shows the window, when it isn't the one in `path`. Examples: a launcher that starts a separate UI process, or a document or folder opened by another app. Defaults to the name of the exe in `path`, or `WindowsTerminal` for `terminal` |
 | `windowTitle` | Only place a window whose title contains this text. Useful when an app shows a splash screen first |
@@ -266,6 +294,14 @@ What can't be captured:
 - **The working directory.** Windows only records the folder a process is in now, not the one it started in, and many apps change it. Add `workingDirectory` yourself if an app needs it.
 - **Apps running as administrator.** Their command line can't be read from a normal process. You get an entry with an empty `path` to fill in.
 - **Arguments that only made sense once,** such as a file the app was opened with. Check `arguments` before saving.
+
+## Known limitations
+
+These come from how Command Palette shows forms, so the extension can't work around them:
+
+- **Clicking on an app's name or path doesn't expand or collapse it.** Command Palette lets you select the text in a form, and a click on text selects it instead of reaching the row. Click the empty part of the row instead, to the right of the name. Making the whole row a button isn't possible (buttons are only as wide as their label), and drawing the text as a picture wouldn't match Command Palette's look.
+- **Forms can't react while you type.** Nothing on the form changes until you press a button. For example, the icon preview updates after you save, and every field is shown whatever the window state.
+- **Saving rewrites `profiles.json` without its comments.** The previous version is kept in `profiles.json.bak`.
 
 ## Notes
 

@@ -8,6 +8,10 @@ namespace HowWieYoong.CmdPalLauncher.Profiles;
 internal sealed class ProfilesFile
 {
     public List<LaunchProfile> Profiles { get; set; } = [];
+
+    /// <summary>Properties this version doesn't know about, kept so saving from the editor doesn't drop them.</summary>
+    [JsonExtensionData]
+    public Dictionary<string, JsonElement>? ExtensionData { get; set; }
 }
 
 /// <summary>A named set of apps that are started together.</summary>
@@ -21,6 +25,10 @@ internal sealed class LaunchProfile
     public string? Icon { get; set; }
 
     public List<AppEntry> Apps { get; set; } = [];
+
+    /// <summary>Properties this version doesn't know about, kept so saving from the editor doesn't drop them.</summary>
+    [JsonExtensionData]
+    public Dictionary<string, JsonElement>? ExtensionData { get; set; }
 }
 
 /// <summary>One app to start as part of a profile.</summary>
@@ -56,7 +64,7 @@ internal sealed class AppEntry
     /// <summary>Monitor to put the window on: "primary", a number counted left to right, or the monitor's name.</summary>
     public MonitorSelector? Monitor { get; set; }
 
-    /// <summary>"normal" or "maximized".</summary>
+    /// <summary>"normal", "maximized" or "minimized".</summary>
     public string? WindowState { get; set; }
 
     /// <summary>Window position and size, relative to the monitor's work area.</summary>
@@ -71,6 +79,10 @@ internal sealed class AppEntry
     /// <summary>How long to wait for the window to appear. Defaults to 15 seconds.</summary>
     public int WindowTimeoutMs { get; set; }
 
+    /// <summary>Properties this version doesn't know about, kept so saving from the editor doesn't drop them.</summary>
+    [JsonExtensionData]
+    public Dictionary<string, JsonElement>? ExtensionData { get; set; }
+
     [JsonIgnore]
     public bool IsTerminal => string.Equals(Type, "terminal", System.StringComparison.OrdinalIgnoreCase);
 
@@ -79,6 +91,13 @@ internal sealed class AppEntry
 
     [JsonIgnore]
     public bool IsMaximized => string.Equals(WindowState, "maximized", System.StringComparison.OrdinalIgnoreCase);
+
+    [JsonIgnore]
+    public bool IsMinimized => string.Equals(WindowState, "minimized", System.StringComparison.OrdinalIgnoreCase);
+
+    [JsonIgnore]
+    public Desktop.WindowShow Show =>
+        IsMaximized ? Desktop.WindowShow.Maximized : IsMinimized ? Desktop.WindowShow.Minimized : Desktop.WindowShow.Normal;
 }
 
 /// <summary>A window position in pixels. Width and height of 0 keep the window's own size.</summary>
@@ -91,6 +110,10 @@ internal sealed class WindowBounds
     public int Width { get; set; }
 
     public int Height { get; set; }
+
+    /// <summary>Properties this version doesn't know about, kept so saving from the editor doesn't drop them.</summary>
+    [JsonExtensionData]
+    public Dictionary<string, JsonElement>? ExtensionData { get; set; }
 }
 
 /// <summary>Either a monitor number (1 = leftmost) or a name such as "primary", "DELL U2720Q" or "DISPLAY2".</summary>
@@ -148,6 +171,10 @@ internal sealed class TerminalTab
 
     /// <summary>Tab colour, e.g. "#0078D4".</summary>
     public string? Color { get; set; }
+
+    /// <summary>Properties this version doesn't know about, kept so saving from the editor doesn't drop them.</summary>
+    [JsonExtensionData]
+    public Dictionary<string, JsonElement>? ExtensionData { get; set; }
 }
 
 [JsonSourceGenerationOptions(
@@ -156,4 +183,7 @@ internal sealed class TerminalTab
     ReadCommentHandling = JsonCommentHandling.Skip,
     AllowTrailingCommas = true)]
 [JsonSerializable(typeof(ProfilesFile))]
+[JsonSerializable(typeof(LaunchProfile))]
+[JsonSerializable(typeof(AppEntry))]
+[JsonSerializable(typeof(TerminalTab))]
 internal sealed partial class ProfilesJsonContext : JsonSerializerContext;

@@ -19,10 +19,21 @@ deploy\x64\CmdPalLauncher.exe -windows                           # monitors + ca
 ## Layout
 
 - `src/HowWieYoong.CmdPalLauncher/`: the extension. Namespace and project are `HowWieYoong.CmdPalLauncher`, but `AssemblyName` is `CmdPalLauncher`, so the exe stays `CmdPalLauncher.exe`. Keep it that way; the manifest and scripts refer to it.
-  - `Profiles/`: the profiles.json model (System.Text.Json source generation, comments and trailing commas allowed) and `ProfileStore`, which watches the file.
+  - `Profiles/`: the profiles.json model (System.Text.Json source generation, comments and trailing commas allowed) and `ProfileStore`, which watches the file. `ProfileEditing` holds the editor's operations: pure functions on `ProfilesFile` that return null or an error message. `ProfileWriter` saves the file, copying the previous version to `profiles.json.bak` first, since comments are lost. Every model class has `[JsonExtensionData]` so unknown settings survive a save.
   - `Launching/`: `AppLauncher` (start info, `wt` arguments), `WindowPlacer` (waits for new windows and moves them), `CommandLine` (argv split/quote), `TerminalCommandLine` (parses `wt` args back into tabs).
   - `Desktop/`: `IDesktop` and `Win32Desktop` (hand-written `LibraryImport` P/Invoke in `NativeMethods`), `MonitorLayout` (pure maths), `WindowCapture` (window → JSON entry), `ExplorerFolders` (Shell.Application late-bound COM).
-  - `Pages/`, `Commands/`, `CmdPalLauncherCommandsProvider.cs`: the Command Palette UI.
+  - `Editing/`: the editor's forms, kept pure.
+    - `Card` builds Adaptive Card JSON with the current values filled in (no `DataJson` binding). `Card.Section` prefixes input ids and drops `isRequired`, because a client-side required field would block every button on the form; the extension validates instead.
+    - `FormValues` reads submissions; `.Section(prefix)` reads one section.
+    - `AppForm`/`TabForm`/`ProfileForm` each have `Fields` (reusable inputs) and `Apply`/`Read`.
+    - `ProfileCard` is the whole-profile form: `p_` holds the profile settings, `a{i}_` each app, and `a{i}_t{j}_` each tab. Every button is an `Action.Submit` whose `data` is a `ProfileCardAction`. A submission first applies all inputs (`ApplyInputs`, which skips the item being deleted), then runs the action (`Perform`).
+    - `ProfileCardLayout` refuses to save if the file's app or tab counts changed since the form was drawn.
+    - Opening a form and saving it unchanged must leave the file identical; `EditorFormTests` and `ProfileCardTests` check this.
+  - `Pages/`, `Pages/Editor/`, `Commands/`, `CmdPalLauncherCommandsProvider.cs`: the Command Palette UI.
+    - Editor changes go through `ProfileStore.Update`, which re-reads the file, applies one edit and saves. The store only raises `Changed` when the file's content differs from what it last loaded, so the watcher seeing the editor's own save doesn't redraw the form and close the sections the user opened.
+    - `ProfileFormPage` (a `ContentPage`) hosts the profile form and tracks which app sections are open. Pages refresh through `PageRefresh.Watch`; `RaiseItemsChanged` is protected, hence `IRefreshable`.
+    - Command Palette makes card text selectable, which swallows clicks on a `selectAction` row, so clicking on the text of a clickable row (the app headers) selects it instead of toggling. Card buttons can't stretch to full width and text drawn as images doesn't fit the look, so this is an accepted trade-off. Forms can't react to an input changing, so don't plan on fields that appear depending on another field.
+    - Two SDK details: `FormContent.SubmitForm(inputs, data)` receives the pressed button's `data`, and `IconText` shows Segoe Fluent glyphs as `\uXXXX` codes, because text boxes can't draw them.
 - `test/HowWieYoong.CmdPalLauncher.Tests/`: xUnit v3 on Microsoft.Testing.Platform (opted in via `global.json`).
 - `build/Build-Package.ps1`: builds a registrable package folder. `build/install.ps1` registers one; it ships in the release zips and `deploy.ps1` uses it with `-InPlace`.
 
@@ -36,6 +47,8 @@ deploy\x64\CmdPalLauncher.exe -windows                           # monitors + ca
 - Analyzers run in `Recommended` mode, and builds should stay warning-free. Test names use `Method_Scenario` underscores (CA1707 is off in the test project only).
 - Files from Microsoft's extension template (`Program.cs`, `CmdPalLauncher.cs`) keep their Microsoft MIT header. Don't add headers to new files.
 - Scripts must work in Windows PowerShell 5.1. In particular, `$PSScriptRoot` is empty in `param()` defaults, so resolve paths in the script body.
+- Write Segoe Fluent glyphs as `\uXXXX` escapes (`"\uE943"`), never as the raw private-use character, which is invisible in editors and diffs. In a verbatim string (`@"..."`) `\u` isn't an escape, so `@"\uE943"` is the six characters `\uE943`; that's the form the editor shows to users.
+- Adaptive Cards can't draw text in the icon font. The editor shows icons as images: `IconPreview` renders a glyph into a PNG with GDI, and that becomes a data: URI.
 
 ## Gotchas
 

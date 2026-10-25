@@ -20,7 +20,7 @@ internal sealed class FakeDesktop : IDesktop
 
     public List<WindowInfo> Windows { get; } = [];
 
-    public List<(nint Handle, PixelRect Bounds, bool Maximize)> Placed { get; } = [];
+    public List<(nint Handle, PixelRect Bounds, WindowShow Show)> Placed { get; } = [];
 
     /// <summary>Optional shared log, so tests can check placements against process starts.</summary>
     public List<string>? Log { get; set; }
@@ -54,9 +54,9 @@ internal sealed class FakeDesktop : IDesktop
         return Windows.ToList();
     }
 
-    public void PlaceWindow(nint handle, PixelRect bounds, bool maximize)
+    public void PlaceWindow(nint handle, PixelRect bounds, WindowShow show)
     {
-        Placed.Add((handle, bounds, maximize));
+        Placed.Add((handle, bounds, show));
         Log?.Add($"place {Windows.First(w => w.Handle == handle).ProcessName}");
     }
 
@@ -72,7 +72,7 @@ internal sealed class UnusedDesktop : IDesktop
 
     public IReadOnlyList<WindowInfo> GetWindows() => throw new InvalidOperationException("desktop should not be used");
 
-    public void PlaceWindow(nint handle, PixelRect bounds, bool maximize) => throw new InvalidOperationException("desktop should not be used");
+    public void PlaceWindow(nint handle, PixelRect bounds, WindowShow show) => throw new InvalidOperationException("desktop should not be used");
 
     public ProcessDetails GetProcessDetails(WindowInfo window) => throw new InvalidOperationException("desktop should not be used");
 }

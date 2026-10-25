@@ -10,7 +10,7 @@ namespace HowWieYoong.CmdPalLauncher.Pages;
 /// <summary>Lists monitors and open windows, and copies a profiles.json app entry that would reopen a window where it is.</summary>
 internal sealed partial class WindowPositionsPage : ListPage
 {
-    internal static readonly IconInfo PageIcon = new("");
+    internal static readonly IconInfo PageIcon = new("\uE7F4");
 
     /// <summary>Command Palette's own window, which is open while this page is.</summary>
     private const string PaletteProcess = "Microsoft.CmdPal.UI";

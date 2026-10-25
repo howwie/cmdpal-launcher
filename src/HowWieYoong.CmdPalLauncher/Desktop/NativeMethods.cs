@@ -10,6 +10,7 @@ internal static unsafe partial class NativeMethods
     public const long WS_EX_TOOLWINDOW = 0x80;
     public const uint GW_OWNER = 4;
     public const int SW_MAXIMIZE = 3;
+    public const int SW_SHOWMINNOACTIVE = 7;
     public const int SW_RESTORE = 9;
     public const uint SWP_NOZORDER = 0x4;
     public const uint SWP_NOACTIVATE = 0x10;
@@ -216,4 +217,67 @@ internal static unsafe partial class NativeMethods
     /// <summary>Returns an NTSTATUS; negative values are errors.</summary>
     [LibraryImport("ntdll.dll")]
     public static partial int NtQueryInformationProcess(nint process, int processInformationClass, void* processInformation, uint length, out uint returnLength);
+
+    public const uint DIB_RGB_COLORS = 0;
+    public const int TRANSPARENT = 1;
+    public const uint ANTIALIASED_QUALITY = 4;
+    public const uint DEFAULT_CHARSET = 1;
+    public const uint DT_CENTER = 0x1;
+    public const uint DT_VCENTER = 0x4;
+    public const uint DT_SINGLELINE = 0x20;
+    public const uint DT_NOPREFIX = 0x800;
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct BITMAPINFOHEADER
+    {
+        public uint biSize;
+        public int biWidth;
+        public int biHeight;
+        public ushort biPlanes;
+        public ushort biBitCount;
+        public uint biCompression;
+        public uint biSizeImage;
+        public int biXPelsPerMeter;
+        public int biYPelsPerMeter;
+        public uint biClrUsed;
+        public uint biClrImportant;
+    }
+
+    [LibraryImport("gdi32.dll")]
+    public static partial nint CreateCompatibleDC(nint hdc);
+
+    [LibraryImport("gdi32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool DeleteDC(nint hdc);
+
+    [LibraryImport("gdi32.dll")]
+    public static partial nint CreateDIBSection(nint hdc, BITMAPINFOHEADER* info, uint usage, out void* bits, nint section, uint offset);
+
+    [LibraryImport("gdi32.dll")]
+    public static partial nint SelectObject(nint hdc, nint obj);
+
+    [LibraryImport("gdi32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool DeleteObject(nint obj);
+
+    [LibraryImport("gdi32.dll", EntryPoint = "CreateFontW", StringMarshalling = StringMarshalling.Utf16)]
+    public static partial nint CreateFont(
+        int height, int width, int escapement, int orientation, int weight, uint italic, uint underline, uint strikeOut,
+        uint charSet, uint outPrecision, uint clipPrecision, uint quality, uint pitchAndFamily, string faceName);
+
+    [LibraryImport("gdi32.dll", EntryPoint = "GetTextFaceW")]
+    public static partial int GetTextFace(nint hdc, int count, char* faceName);
+
+    [LibraryImport("gdi32.dll")]
+    public static partial int SetBkMode(nint hdc, int mode);
+
+    [LibraryImport("gdi32.dll")]
+    public static partial uint SetTextColor(nint hdc, uint color);
+
+    [LibraryImport("gdi32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool GdiFlush();
+
+    [LibraryImport("user32.dll", EntryPoint = "DrawTextW", StringMarshalling = StringMarshalling.Utf16)]
+    public static partial int DrawText(nint hdc, string text, int count, RECT* rect, uint format);
 }

@@ -15,7 +15,7 @@ internal sealed partial class OpenProfilesFileCommand : InvokableCommand
         _filePath = filePath;
         Name = "Edit profiles";
         Id = "HowWieYoong.CmdPalLauncher.EditProfiles";
-        Icon = new IconInfo("");
+        Icon = new IconInfo("\uE70F");
     }
 
     public override CommandResult Invoke()

@@ -89,8 +89,14 @@ internal sealed unsafe class Win32Desktop : IDesktop
         return windows;
     }
 
-    public void PlaceWindow(nint handle, PixelRect bounds, bool maximize)
+    public void PlaceWindow(nint handle, PixelRect bounds, WindowShow show)
     {
+        // Placing again (after the app settles) shouldn't bring a window we already minimized back up.
+        if (show == WindowShow.Minimized && IsIconic(handle))
+        {
+            return;
+        }
+
         // A maximized or minimized window ignores SetWindowPos until it's restored.
         if (IsZoomed(handle) || IsIconic(handle))
         {
@@ -103,10 +109,14 @@ internal sealed unsafe class Win32Desktop : IDesktop
             SetWindowPos(handle, 0, bounds.X, bounds.Y, bounds.Width, bounds.Height, SWP_NOZORDER | SWP_NOACTIVATE);
         }
 
-        if (maximize)
+        // Both act on whichever monitor the window is now on, so a minimized window restores there.
+        if (show == WindowShow.Maximized)
         {
-            // Maximizes on whichever monitor the window is now on.
             ShowWindow(handle, SW_MAXIMIZE);
+        }
+        else if (show == WindowShow.Minimized)
+        {
+            ShowWindow(handle, SW_SHOWMINNOACTIVE);
         }
     }
 

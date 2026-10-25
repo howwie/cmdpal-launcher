@@ -15,7 +15,7 @@ internal sealed partial class LaunchProfileCommand : InvokableCommand
         _profile = profile;
         Name = "Launch";
         Id = $"HowWieYoong.CmdPalLauncher.Launch.{profile.Name}";
-        Icon = new IconInfo("");
+        Icon = new IconInfo("\uE768");
     }
 
     public override CommandResult Invoke()

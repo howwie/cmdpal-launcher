@@ -15,5 +15,7 @@ public class NativeMethodsTests
         Assert.Equal(20, Unsafe.SizeOf<DISPLAYCONFIG_DEVICE_INFO_HEADER>());
         Assert.Equal(84, Unsafe.SizeOf<DISPLAYCONFIG_SOURCE_DEVICE_NAME>());
         Assert.Equal(420, Unsafe.SizeOf<DISPLAYCONFIG_TARGET_DEVICE_NAME>());
+        Assert.Equal(40, Unsafe.SizeOf<BITMAPINFOHEADER>());
+        Assert.Equal(nint.Size == 8 ? 16 : 8, Unsafe.SizeOf<UNICODE_STRING>());
     }
 }

@@ -17,6 +17,14 @@ internal readonly record struct PixelRect(int X, int Y, int Width, int Height)
 /// <param name="DeviceName">GDI device name, e.g. "\\.\DISPLAY2".</param>
 internal sealed record MonitorInfo(int Number, string Name, string DeviceName, bool IsPrimary, PixelRect Bounds, PixelRect WorkArea);
 
+/// <summary>How a placed window is left: at its position, maximized on its monitor, or minimized (restoring there).</summary>
+internal enum WindowShow
+{
+    Normal,
+    Maximized,
+    Minimized,
+}
+
 internal sealed record WindowInfo(nint Handle, string ProcessName, string Title, PixelRect Bounds, bool IsMaximized, bool IsMinimized, uint ProcessId = 0);
 
 /// <summary>How the app behind a window was started, as far as Windows can tell. Any part may be unavailable.</summary>
@@ -40,7 +48,8 @@ internal interface IDesktop
     /// <summary>Visible top-level app windows, in z-order.</summary>
     IReadOnlyList<WindowInfo> GetWindows();
 
-    void PlaceWindow(nint handle, PixelRect bounds, bool maximize);
+    /// <summary>Moves the window to <paramref name="bounds"/>, then maximizes or minimizes it there if asked.</summary>
+    void PlaceWindow(nint handle, PixelRect bounds, WindowShow show);
 
     ProcessDetails GetProcessDetails(WindowInfo window);
 }

@@ -16,6 +16,8 @@ internal sealed partial class ProfileStore : IDisposable
 
     private readonly FileSystemWatcher? _watcher;
     private readonly Timer _debounce;
+    private readonly Lock _saveLock = new();
+    private string? _loadedJson;
 
     public ProfileStore(string? filePath = null, bool watch = true)
     {
@@ -67,19 +69,73 @@ internal sealed partial class ProfileStore : IDisposable
         _debounce.Dispose();
     }
 
+    /// <summary>
+    /// Applies <paramref name="edit"/> to what's in profiles.json right now (not what was last loaded, in case the
+    /// file was edited by hand since) and saves it. Returns null on success, or why it couldn't be done.
+    /// </summary>
+    public string? Update(Func<ProfilesFile, string?> edit)
+    {
+        lock (_saveLock)
+        {
+            ProfilesFile file;
+            try
+            {
+                file = JsonSerializer.Deserialize(ReadWithRetry(FilePath), ProfilesJsonContext.Default.ProfilesFile) ?? new ProfilesFile();
+            }
+            catch (JsonException)
+            {
+                return "profiles.json has an error, so the editor can't save. Fix it in a text editor first.";
+            }
+            catch (IOException ex)
+            {
+                return ex.Message;
+            }
+
+            if (edit(file) is { } error)
+            {
+                return error;
+            }
+
+            try
+            {
+                ProfileWriter.Save(FilePath, file);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                return $"Couldn't save profiles.json: {ex.Message}";
+            }
+
+            // Refresh now rather than waiting for the file watcher, so pages show the change straight away.
+            Reload();
+            return null;
+        }
+    }
+
     private void OnFileChanged(object sender, FileSystemEventArgs e) => _debounce.Change(250, Timeout.Infinite);
 
     private void Reload()
     {
-        Load();
-        Changed?.Invoke(this, EventArgs.Empty);
+        if (Load())
+        {
+            Changed?.Invoke(this, EventArgs.Empty);
+        }
     }
 
-    private void Load()
+    /// <summary>
+    /// Reads the file. Returns false when its content is the same as last time: the watcher also reports the
+    /// editor's own saves, which were already loaded, and redrawing for them would close sections the user opened.
+    /// </summary>
+    private bool Load()
     {
+        string? json = null;
         try
         {
-            var json = ReadWithRetry(FilePath);
+            json = ReadWithRetry(FilePath);
+            if (json == _loadedJson)
+            {
+                return false;
+            }
+
             var file = JsonSerializer.Deserialize(json, ProfilesJsonContext.Default.ProfilesFile);
             Profiles = file?.Profiles ?? [];
             Error = null;
@@ -97,6 +153,9 @@ internal sealed partial class ProfileStore : IDisposable
             Profiles = [];
             Error = ex.Message;
         }
+
+        _loadedJson = json;
+        return true;
     }
 
     private static string ReadWithRetry(string filePath)

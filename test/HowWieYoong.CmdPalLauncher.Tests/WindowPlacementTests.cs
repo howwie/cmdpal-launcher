@@ -28,7 +28,7 @@ public class WindowPlacementTests
         Assert.Empty(failures);
         var placed = _desktop.Placed[0];
         Assert.Equal(new PixelRect(2570, 20, 1200, 800), placed.Bounds);
-        Assert.False(placed.Maximize);
+        Assert.Equal(WindowShow.Normal, placed.Show);
     }
 
     [Fact]
@@ -50,7 +50,7 @@ public class WindowPlacementTests
         Launch(new AppEntry { Path = "code.exe", Monitor = new MonitorSelector(null, "U2515H"), WindowState = "maximized" });
 
         var placed = _desktop.Placed[0];
-        Assert.True(placed.Maximize);
+        Assert.Equal(WindowShow.Maximized, placed.Show);
         Assert.True(placed.Bounds.X >= 2560);
     }
 
@@ -62,7 +62,7 @@ public class WindowPlacementTests
         Launch(new AppEntry { Path = "code.exe", WindowState = "maximized" });
 
         Assert.True(_desktop.Placed[0].Bounds.X >= 2560);
-        Assert.True(_desktop.Placed[0].Maximize);
+        Assert.Equal(WindowShow.Maximized, _desktop.Placed[0].Show);
     }
 
     [Fact]
@@ -153,7 +153,7 @@ public class WindowPlacementTests
     {
         var failures = Launch(new AppEntry { Path = "app.exe", Name = "App", WindowState = "fullscreen" });
 
-        Assert.Equal(["App: unknown windowState \"fullscreen\" (use \"normal\" or \"maximized\")"], failures);
+        Assert.Equal(["App: unknown windowState \"fullscreen\" (use \"normal\", \"maximized\" or \"minimized\")"], failures);
         Assert.Single(_runner.Started);
     }
 
