@@ -44,6 +44,9 @@ jobs:
       VERSION: 0.1.${{ github.run_number }}
     steps:
       - uses: actions/checkout@v7
+        with:
+          # The release notes list the commits since the previous release tag, which needs history and tags.
+          fetch-depth: 0
 
       - uses: actions/setup-dotnet@v6
         with:
@@ -65,17 +68,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          $notes = @"
-          ## Install
-
-          1. Turn on **Developer Mode** (Settings > System > For developers).
-          2. Download the zip for your PC: **x64** for most PCs, **arm64** for Windows on Arm.
-          3. Extract it, open PowerShell in the extracted folder and run:
-
-             ``````powershell
-             powershell -ExecutionPolicy Bypass -File .\install.ps1
-             ``````
-
-          Command Palette restarts and shows the **Launch Profiles** commands. To remove the extension, run the same command with ``-Uninstall``.
-          "@
-          gh release create "v$env:VERSION" artifacts/*.zip --title "v$env:VERSION" --target "$env:GITHUB_SHA" --notes "$notes" --generate-notes
+          # The commits since the previous release, then install steps. --generate-notes adds the
+          # "Full Changelog" link (and any merged pull requests) after them.
+          ./build/Release-Notes.ps1 -Version $env:VERSION | Set-Content artifacts/notes.md -Encoding utf8
+          gh release create "v$env:VERSION" artifacts/*.zip --title "v$env:VERSION" --target "$env:GITHUB_SHA" --notes-file artifacts/notes.md --generate-notes

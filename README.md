@@ -107,6 +107,7 @@ src/HowWieYoong.CmdPalLauncher/          the extension (builds CmdPalLauncher.ex
 test/HowWieYoong.CmdPalLauncher.Tests/   xUnit v3 unit tests
 build/Build-Package.ps1                  builds a folder that Windows can register as a package
 build/install.ps1                        registers a package folder; shipped in the release zips
+build/Release-Notes.ps1                  writes release notes from the commits since the last release
 deploy.ps1                               Build-Package + install, for local development
 .github/workflows/build.yml              CI: tests, then releases from main
 ```
@@ -137,7 +138,7 @@ They don't start processes or touch real windows. `AppLauncher` makes its proces
 
 1. Builds x64 and ARM64 packages in Release mode with `build/Build-Package.ps1`.
 2. Zips each one with `install.ps1` and the licence.
-3. Publishes them as a GitHub release.
+3. Publishes them as a GitHub release. The notes list the commits since the previous release (`build/Release-Notes.ps1`), then the install steps. GitHub's own generated notes only list merged pull requests, which would miss changes pushed straight to `main`.
 
 Releases are versioned `0.1.<workflow run number>`, e.g. tag `v0.1.42`. To move to `0.2` or `1.0`, change `VERSION` in the workflow.
 

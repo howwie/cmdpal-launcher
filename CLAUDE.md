@@ -35,6 +35,7 @@ deploy\x64\CmdPalLauncher.exe -windows                           # monitors + ca
     - Command Palette makes card text selectable, which swallows clicks on a `selectAction` row, so clicking on the text of a clickable row (the app headers) selects it instead of toggling. Card buttons can't stretch to full width and text drawn as images doesn't fit the look, so this is an accepted trade-off. Forms can't react to an input changing, so don't plan on fields that appear depending on another field.
     - Two SDK details: `FormContent.SubmitForm(inputs, data)` receives the pressed button's `data`, and `IconText` shows Segoe Fluent glyphs as `\uXXXX` codes, because text boxes can't draw them.
 - `test/HowWieYoong.CmdPalLauncher.Tests/`: xUnit v3 on Microsoft.Testing.Platform (opted in via `global.json`).
+- `build/Release-Notes.ps1`: writes a release's notes from the commits since the previous `v*` tag, so commit subjects become the changelog. Write them for users.
 - `build/Build-Package.ps1`: builds a registrable package folder. `build/install.ps1` registers one; it ships in the release zips and `deploy.ps1` uses it with `-InPlace`.
 
 ## Conventions
