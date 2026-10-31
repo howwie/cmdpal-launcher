@@ -1,5 +1,6 @@
 # Runs the tests on every push and pull request. On pushes to main, also builds the x64 and ARM64
-# packages and publishes them as a GitHub release, versioned 0.1.<run number>.
+# packages and publishes them as a GitHub release. version.txt holds the first two parts of the
+# version; the last is one more than the latest release (see build/Next-Version.ps1).
 # Pushes that only change documentation don't run at all, so they don't publish a release.
 name: Build
 
@@ -40,17 +41,20 @@ jobs:
     runs-on: windows-latest
     permissions:
       contents: write
-    env:
-      VERSION: 0.1.${{ github.run_number }}
     steps:
       - uses: actions/checkout@v7
         with:
-          # The release notes list the commits since the previous release tag, which needs history and tags.
+          # The version comes from the release tags, and the release notes list the commits since the
+          # previous one, which needs history too.
           fetch-depth: 0
 
       - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: 10.0.x
+
+      - name: Choose version
+        shell: pwsh
+        run: '"VERSION=$(./build/Next-Version.ps1)" >> $env:GITHUB_ENV'
 
       - name: Build packages
         shell: pwsh
