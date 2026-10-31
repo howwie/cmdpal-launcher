@@ -94,11 +94,19 @@ public class TerminalArgumentsTests
     }
 
     [Fact]
-    public void SemicolonInTitle_IsQuoted()
+    public void SemicolonInTitle_IsEscapedSoTerminalDoesNotSplitIt()
     {
-        var args = Build(Terminal(new TerminalTab { Title = "a;b" }));
+        var args = Build(Terminal(new TerminalTab { Title = "Build; Test" }));
 
-        Assert.Equal("-w new new-tab --title \"a;b\" --suppressApplicationTitle", args);
+        Assert.Equal("-w new new-tab --title \"Build\\; Test\" --suppressApplicationTitle", args);
+    }
+
+    [Fact]
+    public void SemicolonInProfileDirectoryOrColor_IsEscaped()
+    {
+        var args = Build(Terminal(new TerminalTab { Profile = "a;b", Directory = @"D:\c;d", Color = "e;f" }));
+
+        Assert.Equal("-w new new-tab -p \"a\\;b\" -d \"D:\\c\\;d\" --tabColor \"e\\;f\"", args);
     }
 
     [Fact]

@@ -90,6 +90,46 @@ public class ProfileWriterTests
     }
 
     [Fact]
+    public void Save_KeepsSeveralPreviousVersions()
+    {
+        using var temp = new TempProfilesFile("{ \"profiles\": [] }");
+
+        for (var i = 1; i <= ProfileWriter.BackupCount + 2; i++)
+        {
+            ProfileWriter.Save(temp.FilePath, new ProfilesFile { Profiles = [new LaunchProfile { Name = $"Save {i}" }] });
+        }
+
+        Assert.Contains("\"Save 11\"", File.ReadAllText(ProfileWriter.BackupPath(temp.FilePath)));
+        Assert.Contains("\"Save 10\"", File.ReadAllText(ProfileWriter.BackupPath(temp.FilePath, 1)));
+        Assert.Contains("\"Save 2\"", File.ReadAllText(ProfileWriter.BackupPath(temp.FilePath, ProfileWriter.BackupCount - 1)));
+        Assert.False(File.Exists(ProfileWriter.BackupPath(temp.FilePath, ProfileWriter.BackupCount)));
+    }
+
+    [Fact]
+    public void Save_KeepsTheHandWrittenVersionHoweverManySavesFollow()
+    {
+        using var temp = new TempProfilesFile("// my comment\n{ \"profiles\": [] }");
+
+        for (var i = 1; i <= ProfileWriter.BackupCount + 2; i++)
+        {
+            ProfileWriter.Save(temp.FilePath, new ProfilesFile { Profiles = [new LaunchProfile { Name = $"Save {i}" }] });
+        }
+
+        Assert.Equal("// my comment\n{ \"profiles\": [] }", File.ReadAllText(ProfileWriter.HandWrittenBackupPath(temp.FilePath)));
+    }
+
+    [Fact]
+    public void Save_EditorOutputIsNotTreatedAsHandWritten()
+    {
+        const string Original = """{ "profiles": [ { "name": "Dev", "future": { "a": [1, 2] }, "apps": [ { "path": "a.exe", "bounds": { "x": 1, "y": 2 } } ] } ] }""";
+        using var temp = new TempProfilesFile(ProfileWriter.Serialize(JsonSerializer.Deserialize(Original, ProfilesJsonContext.Default.ProfilesFile)!));
+
+        ProfileWriter.Save(temp.FilePath, new ProfilesFile());
+
+        Assert.False(File.Exists(ProfileWriter.HandWrittenBackupPath(temp.FilePath)));
+    }
+
+    [Fact]
     public void Clone_IsADeepCopy()
     {
         var app = new AppEntry { Type = "terminal", Tabs = [new TerminalTab { Title = "A" }], Bounds = new WindowBounds { X = 1 } };

@@ -80,13 +80,13 @@ internal sealed partial class ProfileStore : IDisposable
             ProfilesFile file;
             try
             {
-                file = JsonSerializer.Deserialize(ReadWithRetry(FilePath), ProfilesJsonContext.Default.ProfilesFile) ?? new ProfilesFile();
+                file = Parse(ReadWithRetry(FilePath));
             }
             catch (JsonException)
             {
                 return "profiles.json has an error, so the editor can't save. Fix it in a text editor first.";
             }
-            catch (IOException ex)
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
                 return ex.Message;
             }
@@ -136,8 +136,7 @@ internal sealed partial class ProfileStore : IDisposable
                 return false;
             }
 
-            var file = JsonSerializer.Deserialize(json, ProfilesJsonContext.Default.ProfilesFile);
-            Profiles = file?.Profiles ?? [];
+            Profiles = Parse(json).Profiles;
             Error = null;
         }
         catch (JsonException ex)
@@ -148,7 +147,7 @@ internal sealed partial class ProfileStore : IDisposable
             var message = ex.Message.Split(" | LineNumber:")[0];
             Error = ex.LineNumber is long line ? $"Line {line + 1}: {message}" : message;
         }
-        catch (IOException ex)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             Profiles = [];
             Error = ex.Message;
@@ -158,16 +157,72 @@ internal sealed partial class ProfileStore : IDisposable
         return true;
     }
 
+    /// <summary>
+    /// Reads profiles.json. A null where a value is needed is valid JSON, so it's reported here as an error like any
+    /// other, rather than crashing whatever uses it later.
+    /// </summary>
+    private static ProfilesFile Parse(string json)
+    {
+        var file = JsonSerializer.Deserialize(json, ProfilesJsonContext.Default.ProfilesFile) ?? new ProfilesFile();
+        file.Profiles ??= [];
+        if (FindNull(file) is { } path)
+        {
+            throw new JsonException($"{path} can't be null.");
+        }
+
+        return file;
+    }
+
+    /// <summary>The JSON path of the first required value that's null, or null when there are none.</summary>
+    private static string? FindNull(ProfilesFile file)
+    {
+        for (var i = 0; i < file.Profiles.Count; i++)
+        {
+            var profile = file.Profiles[i];
+            var path = $"$.profiles[{i}]";
+            if (profile is null)
+            {
+                return path;
+            }
+
+            if (profile.Name is null)
+            {
+                return $"{path}.name";
+            }
+
+            if (profile.Apps is null)
+            {
+                return $"{path}.apps";
+            }
+
+            for (var j = 0; j < profile.Apps.Count; j++)
+            {
+                var app = profile.Apps[j];
+                if (app is null)
+                {
+                    return $"{path}.apps[{j}]";
+                }
+
+                if (app.Tabs?.IndexOf(null!) is >= 0 and var tab)
+                {
+                    return $"{path}.apps[{j}].tabs[{tab}]";
+                }
+            }
+        }
+
+        return null;
+    }
+
     private static string ReadWithRetry(string filePath)
     {
-        // The file may still be locked by the editor that just saved it.
+        // The file may still be locked by the editor that just saved it, or be part-way through being replaced.
         for (var attempt = 1; ; attempt++)
         {
             try
             {
                 return File.ReadAllText(filePath);
             }
-            catch (IOException) when (attempt < 5 && File.Exists(filePath))
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException && attempt < 5 && File.Exists(filePath))
             {
                 Thread.Sleep(100);
             }

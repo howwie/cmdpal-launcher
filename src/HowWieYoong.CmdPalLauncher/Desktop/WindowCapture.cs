@@ -62,10 +62,20 @@ internal static class WindowCapture
 
             // Terminal keeps the wt.exe command line it was started with, which lists the tabs it opened.
             var arguments = details.CommandLine is { } commandLine ? CommandLine.SplitProgram(commandLine).Arguments : string.Empty;
-            var tabs = TerminalCommandLine.ParseTabs(arguments, out var skipped);
+
+            // A window handed over from wt.exe has only this flag, so the names on its tabs are all there is to go on.
+            var handedOver = string.Equals(arguments.Trim(), "-Embedding", StringComparison.OrdinalIgnoreCase);
+            List<string> skipped = [];
+            var started = handedOver ? [] : TerminalCommandLine.ParseTabs(arguments, out skipped);
+            IReadOnlyList<string>? names = details.TabNames is { Count: > 0 } ? details.TabNames : handedOver ? [window.Title] : null;
+
+            // A plain window's one tab is only named after its shell, which isn't worth fixing as a title.
+            var tabs = names is null || (names.Count == 1 && started.Count == 0 && !handedOver) ? started : MergeTabs(started, names);
             entry.Add(new("tabs", TabsJson(tabs)));
 
-            notes.Add(tabs.Count > 0
+            notes.Add(tabs.Except(started).Any()
+                ? "Tabs without a folder or command were only found by name, because Windows Terminal doesn't reveal the rest: add them under \"tabs\". Remove a title if the shell should set it."
+                : tabs.Count > 0
                 ? "Tabs come from the command Windows Terminal was started with. Tabs or windows opened since then aren't included."
                 : "Windows Terminal wasn't started with tabs on its command line. Add them under \"tabs\".");
             if (skipped.Count > 0)
@@ -215,6 +225,30 @@ internal static class WindowCapture
         });
 
         return "[\n" + string.Join(",\n", lines) + "\n  ]";
+    }
+
+    /// <summary>
+    /// The tabs a Terminal window has now. When the number matches how it was started they're those tabs, because a
+    /// name may just be what the shell set. Otherwise tabs were opened or closed, so only a matching title can tell
+    /// which started tab is which, and the rest have just their name.
+    /// </summary>
+    private static List<TerminalTab> MergeTabs(List<TerminalTab> started, IReadOnlyList<string> names)
+    {
+        if (names.Count == started.Count)
+        {
+            return started;
+        }
+
+        var unused = started.ToList();
+        var tabs = new List<TerminalTab>();
+        foreach (var name in names)
+        {
+            var tab = unused.Find(t => t.Title == name) ?? new TerminalTab { Title = name };
+            unused.Remove(tab);
+            tabs.Add(tab);
+        }
+
+        return tabs;
     }
 
     private static string Render(List<Line> lines, string indent)

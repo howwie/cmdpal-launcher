@@ -104,7 +104,7 @@ internal sealed class WindowPlacer
         var windows = _desktop.GetWindows();
         foreach (var window in windows)
         {
-            if (!_knownWindows.Add(window.Handle))
+            if (_knownWindows.Contains(window.Handle))
             {
                 continue;
             }
@@ -112,8 +112,15 @@ internal sealed class WindowPlacer
             var pending = _pending.FirstOrDefault(p => p.Handle == 0 && Matches(p, window));
             if (pending is not null)
             {
+                _knownWindows.Add(window.Handle);
                 pending.Handle = window.Handle;
                 Place(pending.App, window);
+            }
+            else if (!_pending.Any(p => p.Handle == 0 && IsFromProcess(p, window)))
+            {
+                // A window from a process we're waiting on stays unknown, because its title may still change to the
+                // one we want. Any other window is ignored from now on, so an app started later can't claim it.
+                _knownWindows.Add(window.Handle);
             }
         }
 
@@ -136,7 +143,7 @@ internal sealed class WindowPlacer
             {
                 if (windows.FirstOrDefault(w => w.Handle == pending.Handle) is { } window)
                 {
-                    Place(pending.App, window);
+                    Place(pending.App, window, settling: true);
                 }
 
                 _pending.Remove(pending);
@@ -144,19 +151,31 @@ internal sealed class WindowPlacer
         }
     }
 
+    private static bool IsFromProcess(PendingWindow pending, WindowInfo window) =>
+        string.Equals(window.ProcessName, pending.ProcessName, StringComparison.OrdinalIgnoreCase);
+
     private static bool Matches(PendingWindow pending, WindowInfo window) =>
-        string.Equals(window.ProcessName, pending.ProcessName, StringComparison.OrdinalIgnoreCase)
+        IsFromProcess(pending, window)
         && (string.IsNullOrEmpty(pending.App.WindowTitle) || window.Title.Contains(pending.App.WindowTitle, StringComparison.OrdinalIgnoreCase));
 
-    private void Place(AppEntry app, WindowInfo window)
+    private void Place(AppEntry app, WindowInfo window, bool settling = false)
     {
-        var monitor = TargetMonitor(app) ?? MonitorLayout.MonitorFor(window.Bounds, Monitors) ?? Monitors.FirstOrDefault(m => m.IsPrimary);
+        // Moving a window restores it, so a window that's left as it opened has to be put back in that state.
+        var show = app.Show ?? (window.IsMaximized ? WindowShow.Maximized : window.IsMinimized ? WindowShow.Minimized : WindowShow.Normal);
+
+        // Placing again shouldn't bring a window we already minimized back up.
+        if (settling && show == WindowShow.Minimized && window.IsMinimized)
+        {
+            return;
+        }
+
+        var monitor = TargetMonitor(app) ?? MonitorLayout.MonitorFor(window.IsMinimized ? window.NormalBounds : window.Bounds, Monitors) ?? Monitors.FirstOrDefault(m => m.IsPrimary);
         if (monitor is null)
         {
             return;
         }
 
-        _desktop.PlaceWindow(window.Handle, MonitorLayout.TargetBounds(monitor, app.Bounds, window.Bounds), app.Show);
+        _desktop.PlaceWindow(window.Handle, MonitorLayout.TargetBounds(monitor, app.Bounds, window.NormalBounds), show);
     }
 
     private sealed class PendingWindow(AppEntry app, string processName, int timeoutMs)

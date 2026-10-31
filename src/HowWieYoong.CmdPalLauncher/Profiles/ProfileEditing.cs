@@ -69,17 +69,6 @@ internal static class ProfileEditing
         return null;
     }
 
-    public static string? AddApp(ProfilesFile file, string profileName, AppEntry app)
-    {
-        if (Find(file, profileName) is not { } profile)
-        {
-            return NotFound(profileName);
-        }
-
-        profile.Apps.Add(app);
-        return null;
-    }
-
     public static string? UpdateApp(ProfilesFile file, string profileName, int index, Func<AppEntry, string?> update) =>
         WithApp(file, profileName, index, (_, app) => update(app));
 

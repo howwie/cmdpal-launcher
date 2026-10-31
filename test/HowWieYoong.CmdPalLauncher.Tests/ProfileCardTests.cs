@@ -167,7 +167,7 @@ public class ProfileCardTests
 
         Assert.Equal("App 3 (explorer): Path is required.", Apply(file, CardJson.Submit(card, new() { ["a2_path"] = "" })));
         Assert.Equal(
-            "App 2 (Windows Terminal), tab 2: Fill in at least a title, directory, profile or command.",
+            "App 2 (Windows Terminal), tab 2: Fill in at least a title, directory, profile, command or colour.",
             Apply(file, CardJson.Submit(card, new() { ["a1_t1_profile"] = "", ["a1_t1_command"] = "" })));
         Assert.Equal("Give the profile a name.", Apply(file, CardJson.Submit(card, new() { ["p_name"] = " " })));
     }

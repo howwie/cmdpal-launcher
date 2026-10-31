@@ -174,7 +174,8 @@ public class EditorFormTests
         Assert.Null(TabForm.Apply(copy, Submit(TabForm.Template(tab))));
         Assert.Equal((tab.Title, tab.Directory, tab.Profile, tab.Command, tab.Color), (copy.Title, copy.Directory, copy.Profile, copy.Command, copy.Color));
 
-        Assert.Equal("Fill in at least a title, directory, profile or command.", TabForm.Apply(new TerminalTab(), """{ "color": "#fff" }"""));
+        Assert.Null(TabForm.Apply(new TerminalTab(), """{ "color": "#fff" }"""));
+        Assert.Equal("Fill in at least a title, directory, profile, command or colour.", TabForm.Apply(new TerminalTab(), "{}"));
     }
 
     [Fact]

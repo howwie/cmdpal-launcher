@@ -95,9 +95,13 @@ internal sealed class AppEntry
     [JsonIgnore]
     public bool IsMinimized => string.Equals(WindowState, "minimized", System.StringComparison.OrdinalIgnoreCase);
 
+    /// <summary>The state to leave the window in, or null to keep the one it opened in.</summary>
     [JsonIgnore]
-    public Desktop.WindowShow Show =>
-        IsMaximized ? Desktop.WindowShow.Maximized : IsMinimized ? Desktop.WindowShow.Minimized : Desktop.WindowShow.Normal;
+    public Desktop.WindowShow? Show =>
+        WindowState is null ? null
+        : IsMaximized ? Desktop.WindowShow.Maximized
+        : IsMinimized ? Desktop.WindowShow.Minimized
+        : Desktop.WindowShow.Normal;
 }
 
 /// <summary>A window position in pixels. Width and height of 0 keep the window's own size.</summary>

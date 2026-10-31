@@ -54,7 +54,7 @@ public class EditorPageTests
         Assert.Equal("Dev", CardJson.Value(inputs, "p_name"));
         Assert.Equal("code", CardJson.Value(inputs, "a0_path"));
         Assert.Equal("API", CardJson.Value(inputs, "a1_t0_title"));
-        Assert.Equal(["Launch this profile", "Add from an open window", "Show or hide all app settings", "Open profiles.json"], page.Commands.Select(c => ((Microsoft.CommandPalette.Extensions.ICommandContextItem)c).Title));
+        Assert.Equal(["Launch this profile", "Open profiles.json"], page.Commands.Select(c => ((Microsoft.CommandPalette.Extensions.ICommandContextItem)c).Title));
     }
 
     [Fact]
@@ -90,6 +90,71 @@ public class EditorPageTests
         var redrawn = ((ProfileCardContent)page.GetContent()[0]).TemplateJson;
         var bodies = CardJson.Elements(redrawn).Where(e => e["id"]?.GetValue<string>() is { } id && id.EndsWith("_body", System.StringComparison.Ordinal)).ToList();
         Assert.Equal([false, false, true], bodies.Select(b => b["isVisible"]?.GetValue<bool>() ?? true));
+    }
+
+    [Fact]
+    public void ProfilePage_ShowOrHideAll_KeepsWhatWasTypedAndOpensEveryApp()
+    {
+        using var file = new TempProfilesFile(Json);
+        using var store = new ProfileStore(file.FilePath, watch: false);
+        var page = new ProfileEditorPage(store, _desktop).PageFor("Dev");
+        var form = (ProfileCardContent)page.GetContent()[0];
+
+        form.SubmitForm(CardJson.Submit(form.TemplateJson, new() { ["a0_arguments"] = "--typed" }), CardJson.Buttons(form.TemplateJson)["Show or hide all apps"]);
+
+        Assert.Equal("--typed", store.Profiles[0].Apps[0].Arguments);
+        var redrawn = ((ProfileCardContent)page.GetContent()[0]).TemplateJson;
+        var bodies = CardJson.Elements(redrawn).Where(e => e["id"]?.GetValue<string>() is { } id && id.EndsWith("_body", System.StringComparison.Ordinal)).ToList();
+        Assert.Equal([true, true], bodies.Select(b => b["isVisible"]?.GetValue<bool>() ?? true));
+    }
+
+    [Fact]
+    public void ProfilePage_AddWindow_KeepsWhatWasTypedAndAddsTheWindow()
+    {
+        using var file = new TempProfilesFile(Json);
+        using var store = new ProfileStore(file.FilePath, watch: false);
+        var window = _desktop.AddWindow("notepad", "Notes");
+        _desktop.Details[window.Handle] = new Desktop.ProcessDetails(ExecutablePath: @"C:\Windows\notepad.exe");
+        var page = new ProfileEditorPage(store, _desktop).PageFor("Dev");
+        var form = (ProfileCardContent)page.GetContent()[0];
+        var changes = new System.Collections.Generic.Dictionary<string, string> { ["a0_arguments"] = "--typed", ["add_window"] = ((long)window.Handle).ToString(System.Globalization.CultureInfo.InvariantCulture) };
+
+        form.SubmitForm(CardJson.Submit(form.TemplateJson, changes), CardJson.Buttons(form.TemplateJson)["Add this window"]);
+
+        var apps = store.Profiles[0].Apps;
+        Assert.Equal("--typed", apps[0].Arguments);
+        Assert.Equal(3, apps.Count);
+        Assert.Contains("notepad.exe", apps[2].Path);
+    }
+
+    [Fact]
+    public void ProfilePage_AddWindow_WithNothingChosen_SavesNothing()
+    {
+        using var file = new TempProfilesFile(Json);
+        using var store = new ProfileStore(file.FilePath, watch: false);
+        _desktop.AddWindow("notepad", "Notes");
+        var page = new ProfileEditorPage(store, _desktop).PageFor("Dev");
+        var form = (ProfileCardContent)page.GetContent()[0];
+
+        form.SubmitForm(CardJson.Submit(form.TemplateJson, new() { ["a0_arguments"] = "--typed" }), CardJson.Buttons(form.TemplateJson)["Add this window"]);
+
+        Assert.Equal(Json, System.IO.File.ReadAllText(file.FilePath));
+    }
+
+    [Fact]
+    public void ProfilePage_WindowList_LeavesOutMinimizedWindowsAndCommandPalette()
+    {
+        using var file = new TempProfilesFile(Json);
+        using var store = new ProfileStore(file.FilePath, watch: false);
+        _desktop.AddWindow("notepad", "Notes");
+        _desktop.AddWindow("Microsoft.CmdPal.UI", "Command Palette");
+        _desktop.Windows.Add(_desktop.AddWindow("calc", "Calculator") with { Handle = 999, IsMinimized = true });
+        var page = new ProfileEditorPage(store, _desktop).PageFor("Dev");
+
+        var form = (ProfileCardContent)page.GetContent()[0];
+
+        var choices = CardJson.Inputs(form.TemplateJson)["add_window"]["choices"]!.AsArray();
+        Assert.Equal(["Choose a window", "Notes (notepad)", "Calculator (calc)"], choices.Select(c => c!["title"]!.GetValue<string>()));
     }
 
     [Fact]

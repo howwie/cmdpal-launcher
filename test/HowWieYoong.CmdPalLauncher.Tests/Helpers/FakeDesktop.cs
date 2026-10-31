@@ -9,6 +9,7 @@ namespace HowWieYoong.CmdPalLauncher.Tests.Helpers;
 internal sealed class FakeDesktop : IDesktop
 {
     private readonly List<(int AfterCalls, WindowInfo Window)> _later = [];
+    private readonly List<(int AfterCalls, nint Handle, string Title)> _renames = [];
     private nint _nextHandle = 100;
     private int _getWindowsCalls;
 
@@ -29,9 +30,9 @@ internal sealed class FakeDesktop : IDesktop
         new(number, name, $@"\\.\DISPLAY{number}", primary, new PixelRect(x, y, 2560, 1440), new PixelRect(x, y, 2560, 1380));
 
     /// <summary>Adds a window now and returns it.</summary>
-    public WindowInfo AddWindow(string processName, string title = "Window", PixelRect? bounds = null, bool maximized = false)
+    public WindowInfo AddWindow(string processName, string title = "Window", PixelRect? bounds = null, bool maximized = false, bool minimized = false, PixelRect? restored = null)
     {
-        var window = new WindowInfo(_nextHandle++, processName, title, bounds ?? new PixelRect(100, 100, 800, 600), maximized, false);
+        var window = new WindowInfo(_nextHandle++, processName, title, bounds ?? new PixelRect(100, 100, 800, 600), maximized, minimized, RestoredBounds: restored);
         Windows.Add(window);
         return window;
     }
@@ -39,6 +40,10 @@ internal sealed class FakeDesktop : IDesktop
     /// <summary>Adds a window once <see cref="GetWindows"/> has been called <paramref name="afterCalls"/> more times.</summary>
     public void AddWindowLater(int afterCalls, string processName, string title = "Window") =>
         _later.Add((_getWindowsCalls + afterCalls, new WindowInfo(_nextHandle++, processName, title, new PixelRect(100, 100, 800, 600), false, false)));
+
+    /// <summary>Changes a window's title once <see cref="GetWindows"/> has been called <paramref name="afterCalls"/> more times.</summary>
+    public void RenameWindowLater(int afterCalls, nint handle, string title) =>
+        _renames.Add((_getWindowsCalls + afterCalls, handle, title));
 
     public IReadOnlyList<MonitorInfo> GetMonitors() => Monitors;
 
@@ -51,6 +56,13 @@ internal sealed class FakeDesktop : IDesktop
             _later.Remove(due);
         }
 
+        foreach (var due in _renames.Where(r => r.AfterCalls <= _getWindowsCalls).ToList())
+        {
+            var index = Windows.FindIndex(w => w.Handle == due.Handle);
+            Windows[index] = Windows[index] with { Title = due.Title };
+            _renames.Remove(due);
+        }
+
         return Windows.ToList();
     }
 
@@ -58,6 +70,9 @@ internal sealed class FakeDesktop : IDesktop
     {
         Placed.Add((handle, bounds, show));
         Log?.Add($"place {Windows.First(w => w.Handle == handle).ProcessName}");
+
+        var index = Windows.FindIndex(w => w.Handle == handle);
+        Windows[index] = Windows[index] with { IsMaximized = show == WindowShow.Maximized, IsMinimized = show == WindowShow.Minimized };
     }
 
     public Dictionary<nint, ProcessDetails> Details { get; } = [];

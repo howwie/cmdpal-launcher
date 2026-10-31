@@ -21,7 +21,7 @@ internal sealed partial class WindowPositionsPage : ListPage
     {
         _desktop = desktop;
         Icon = PageIcon;
-        Title = "Window Positions";
+        Title = "Capture Window";
         Name = "Open";
 
         // A stable ID lets Command Palette recognise the command across reloads, and pin it or give it an alias.
