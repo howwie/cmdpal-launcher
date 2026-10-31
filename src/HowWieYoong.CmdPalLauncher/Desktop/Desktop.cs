@@ -25,7 +25,13 @@ internal enum WindowShow
     Minimized,
 }
 
-internal sealed record WindowInfo(nint Handle, string ProcessName, string Title, PixelRect Bounds, bool IsMaximized, bool IsMinimized, uint ProcessId = 0);
+/// <param name="Bounds">Where the window is now. Windows parks a minimized window far off screen at title-bar size.</param>
+/// <param name="RestoredBounds">Where a maximized or minimized window goes when it's restored, if known.</param>
+internal sealed record WindowInfo(nint Handle, string ProcessName, string Title, PixelRect Bounds, bool IsMaximized, bool IsMinimized, uint ProcessId = 0, PixelRect? RestoredBounds = null)
+{
+    /// <summary>The window's position and size when it's neither maximized nor minimized.</summary>
+    public PixelRect NormalBounds => RestoredBounds ?? Bounds;
+}
 
 /// <summary>How the app behind a window was started, as far as Windows can tell. Any part may be unavailable.</summary>
 /// <param name="ExecutablePath">Full path of the app's exe.</param>

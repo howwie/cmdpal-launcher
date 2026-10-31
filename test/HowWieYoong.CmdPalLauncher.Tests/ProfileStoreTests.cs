@@ -113,6 +113,34 @@ public class ProfileStoreTests
     }
 
     [Fact]
+    public void Update_FileThatCantBeRead_ReportsItInsteadOfThrowing()
+    {
+        using var file = new TempProfilesFile("""{ "profiles": [] }""");
+        using var store = new ProfileStore(file.FilePath, watch: false);
+        File.Delete(file.FilePath);
+        Directory.CreateDirectory(file.FilePath);
+
+        Assert.NotNull(store.Update(_ => null));
+    }
+
+    [Fact]
+    public async Task ReloadingAFileThatCantBeRead_SetsTheErrorInsteadOfCrashing()
+    {
+        using var file = new TempProfilesFile("""{ "profiles": [ { "name": "Before" } ] }""");
+        using var store = new ProfileStore(file.FilePath, watch: true);
+        var changed = new TaskCompletionSource();
+        store.Changed += (_, _) => changed.TrySetResult();
+
+        // Reading a folder throws UnauthorizedAccessException, the same as a file with no read access.
+        File.Delete(file.FilePath);
+        Directory.CreateDirectory(file.FilePath);
+
+        await changed.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+        Assert.NotNull(store.Error);
+        Assert.Empty(store.Profiles);
+    }
+
+    [Fact]
     public async Task SavingTheFile_ReloadsAndRaisesChanged()
     {
         using var file = new TempProfilesFile("""{ "profiles": [ { "name": "Before" } ] }""");

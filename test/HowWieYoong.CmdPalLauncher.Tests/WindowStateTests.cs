@@ -17,7 +17,7 @@ public class WindowStateTests
     private readonly FakeDesktop _desktop = new();
 
     [Theory]
-    [InlineData(null, "Normal")]
+    [InlineData(null, "")]
     [InlineData("normal", "Normal")]
     [InlineData("Maximized", "Maximized")]
     [InlineData("MINIMIZED", "Minimized")]
@@ -38,6 +38,43 @@ public class WindowStateTests
         Assert.Empty(failures);
         Assert.All(_desktop.Placed, p => Assert.Equal(WindowShow.Minimized, p.Show));
         Assert.True(_desktop.Placed[0].Bounds.X >= 2560);
+    }
+
+    [Fact]
+    public void Minimized_AlreadyMinimized_IsMovedOnceAndNotBroughtBackUp()
+    {
+        var placed = Place(new AppEntry { Path = "chat.exe", Monitor = new MonitorSelector(2, null), WindowState = "minimized" }, minimized: true);
+
+        var (_, bounds, show) = Assert.Single(placed);
+        Assert.Equal(WindowShow.Minimized, show);
+        Assert.Equal(new PixelRect(3440, 390, 800, 600), bounds);
+    }
+
+    [Fact]
+    public void Minimized_WithoutMonitor_StaysOnTheMonitorItsWindowRestoresTo()
+    {
+        var placed = Place(new AppEntry { Path = "chat.exe", WindowState = "minimized" }, minimized: true, restored: new PixelRect(3000, 100, 800, 600));
+
+        Assert.True(placed[0].Bounds.X >= 2560);
+    }
+
+    [Theory]
+    [InlineData(true, false, "Maximized")]
+    [InlineData(false, true, "Minimized")]
+    public void LeftAsItOpens_IsPutBackInThatStateAtItsRestoredSize(bool maximized, bool minimized, string expected)
+    {
+        var placed = Place(new AppEntry { Path = "chat.exe", Monitor = new MonitorSelector(2, null) }, maximized, minimized);
+
+        Assert.All(placed, p => Assert.Equal(expected, p.Show.ToString()));
+        Assert.Equal(new PixelRect(3440, 390, 800, 600), placed[0].Bounds);
+    }
+
+    [Fact]
+    public void Normal_RestoresAMaximizedWindow()
+    {
+        var placed = Place(new AppEntry { Path = "chat.exe", Monitor = new MonitorSelector(2, null), WindowState = "normal" }, maximized: true);
+
+        Assert.All(placed, p => Assert.Equal(WindowShow.Normal, p.Show));
     }
 
     [Fact]
@@ -98,5 +135,16 @@ public class WindowStateTests
 
         var header = CardJson.Elements(card).First(e => CardJson.Type(e) == "ColumnSet" && e["selectAction"] is not null);
         Assert.Equal("20px", header["columns"]![0]!["width"]!.GetValue<string>());
+    }
+
+    /// <summary>Launches an app whose window opens maximized or minimized, at 800x600 when restored.</summary>
+    private List<(nint Handle, PixelRect Bounds, WindowShow Show)> Place(AppEntry app, bool maximized = false, bool minimized = false, PixelRect? restored = null)
+    {
+        var bounds = minimized ? new PixelRect(-32000, -32000, 160, 28) : new PixelRect(-8, -8, 2576, 1396);
+        var runner = new FakeProcessRunner();
+        runner.OnStart = _ => _desktop.AddWindow("chat", bounds: bounds, maximized: maximized, minimized: minimized, restored: restored ?? new PixelRect(100, 100, 800, 600));
+
+        Assert.Empty(AppLauncher.LaunchAll(new LaunchProfile { Name = "P", Apps = [app] }, runner, _desktop));
+        return _desktop.Placed;
     }
 }

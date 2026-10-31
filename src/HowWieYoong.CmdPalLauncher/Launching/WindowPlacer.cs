@@ -143,7 +143,7 @@ internal sealed class WindowPlacer
             {
                 if (windows.FirstOrDefault(w => w.Handle == pending.Handle) is { } window)
                 {
-                    Place(pending.App, window);
+                    Place(pending.App, window, settling: true);
                 }
 
                 _pending.Remove(pending);
@@ -158,15 +158,24 @@ internal sealed class WindowPlacer
         IsFromProcess(pending, window)
         && (string.IsNullOrEmpty(pending.App.WindowTitle) || window.Title.Contains(pending.App.WindowTitle, StringComparison.OrdinalIgnoreCase));
 
-    private void Place(AppEntry app, WindowInfo window)
+    private void Place(AppEntry app, WindowInfo window, bool settling = false)
     {
-        var monitor = TargetMonitor(app) ?? MonitorLayout.MonitorFor(window.Bounds, Monitors) ?? Monitors.FirstOrDefault(m => m.IsPrimary);
+        // Moving a window restores it, so a window that's left as it opened has to be put back in that state.
+        var show = app.Show ?? (window.IsMaximized ? WindowShow.Maximized : window.IsMinimized ? WindowShow.Minimized : WindowShow.Normal);
+
+        // Placing again shouldn't bring a window we already minimized back up.
+        if (settling && show == WindowShow.Minimized && window.IsMinimized)
+        {
+            return;
+        }
+
+        var monitor = TargetMonitor(app) ?? MonitorLayout.MonitorFor(window.IsMinimized ? window.NormalBounds : window.Bounds, Monitors) ?? Monitors.FirstOrDefault(m => m.IsPrimary);
         if (monitor is null)
         {
             return;
         }
 
-        _desktop.PlaceWindow(window.Handle, MonitorLayout.TargetBounds(monitor, app.Bounds, window.Bounds), app.Show);
+        _desktop.PlaceWindow(window.Handle, MonitorLayout.TargetBounds(monitor, app.Bounds, window.NormalBounds), show);
     }
 
     private sealed class PendingWindow(AppEntry app, string processName, int timeoutMs)

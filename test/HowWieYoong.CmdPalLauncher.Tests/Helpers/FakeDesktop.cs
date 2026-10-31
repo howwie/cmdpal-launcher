@@ -30,9 +30,9 @@ internal sealed class FakeDesktop : IDesktop
         new(number, name, $@"\\.\DISPLAY{number}", primary, new PixelRect(x, y, 2560, 1440), new PixelRect(x, y, 2560, 1380));
 
     /// <summary>Adds a window now and returns it.</summary>
-    public WindowInfo AddWindow(string processName, string title = "Window", PixelRect? bounds = null, bool maximized = false)
+    public WindowInfo AddWindow(string processName, string title = "Window", PixelRect? bounds = null, bool maximized = false, bool minimized = false, PixelRect? restored = null)
     {
-        var window = new WindowInfo(_nextHandle++, processName, title, bounds ?? new PixelRect(100, 100, 800, 600), maximized, false);
+        var window = new WindowInfo(_nextHandle++, processName, title, bounds ?? new PixelRect(100, 100, 800, 600), maximized, minimized, RestoredBounds: restored);
         Windows.Add(window);
         return window;
     }
@@ -70,6 +70,9 @@ internal sealed class FakeDesktop : IDesktop
     {
         Placed.Add((handle, bounds, show));
         Log?.Add($"place {Windows.First(w => w.Handle == handle).ProcessName}");
+
+        var index = Windows.FindIndex(w => w.Handle == handle);
+        Windows[index] = Windows[index] with { IsMaximized = show == WindowShow.Maximized, IsMinimized = show == WindowShow.Minimized };
     }
 
     public Dictionary<nint, ProcessDetails> Details { get; } = [];

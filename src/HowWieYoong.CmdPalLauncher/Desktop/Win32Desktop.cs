@@ -82,7 +82,8 @@ internal sealed unsafe class Win32Desktop : IDesktop
 
             if (processName is not null)
             {
-                windows.Add(new WindowInfo(handle, processName, title, ToPixelRect(rect), IsZoomed(handle), IsIconic(handle), processId));
+                var (maximized, minimized) = (IsZoomed(handle), IsIconic(handle));
+                windows.Add(new WindowInfo(handle, processName, title, ToPixelRect(rect), maximized, minimized, processId, maximized || minimized ? GetRestoredBounds(handle) : null));
             }
         }
 
@@ -91,12 +92,6 @@ internal sealed unsafe class Win32Desktop : IDesktop
 
     public void PlaceWindow(nint handle, PixelRect bounds, WindowShow show)
     {
-        // Placing again (after the app settles) shouldn't bring a window we already minimized back up.
-        if (show == WindowShow.Minimized && IsIconic(handle))
-        {
-            return;
-        }
-
         // A maximized or minimized window ignores SetWindowPos until it's restored.
         if (IsZoomed(handle) || IsIconic(handle))
         {
@@ -328,6 +323,13 @@ internal sealed unsafe class Win32Desktop : IDesktop
         {
             return null;
         }
+    }
+
+    /// <summary>Close enough for finding the window's monitor: these coordinates leave out a taskbar at the top or left.</summary>
+    private static PixelRect? GetRestoredBounds(nint handle)
+    {
+        var placement = new WINDOWPLACEMENT { length = (uint)sizeof(WINDOWPLACEMENT) };
+        return GetWindowPlacement(handle, ref placement) ? ToPixelRect(placement.rcNormalPosition) : null;
     }
 
     private static PixelRect ToPixelRect(RECT rect) => new(rect.Left, rect.Top, rect.Right - rect.Left, rect.Bottom - rect.Top);

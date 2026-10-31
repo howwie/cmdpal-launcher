@@ -238,7 +238,7 @@ Any app, including `terminal`, can be put on a specific monitor:
 | Key | Description |
 |---|---|
 | `monitor` | `"primary"`; a number counted **left to right** (then top to bottom), starting at 1; or the monitor's model name, e.g. `"DELL U2515H"`. A unique part of a name such as `"U2515H"` also works, as does a device name like `"DISPLAY2"`. A name keeps working if you rearrange your monitors; use a number if two monitors are the same model |
-| `windowState` | `"normal"`, `"maximized"` or `"minimized"`. A minimized window is first moved to its monitor and position, so it restores there |
+| `windowState` | `"normal"`, `"maximized"` or `"minimized"`. Leave it out to keep the state the window opened in. A minimized window is first moved to its monitor and position, so it restores there, which can show it briefly |
 | `bounds` | Position and size in pixels, relative to the top-left of the monitor's work area (the screen minus the taskbar). Leave out `width`/`height`, or set them to 0, to keep the window's own size. Without `bounds`, the window is centred on the monitor at its own size |
 | `windowProcess` | The process that shows the window, when it isn't the one in `path`. Examples: a launcher that starts a separate UI process, or a document or folder opened by another app. Defaults to the name of the exe in `path`, or `WindowsTerminal` for `terminal` |
 | `windowTitle` | Only place a window whose title contains this text. Useful when an app shows a splash screen first |

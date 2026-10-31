@@ -86,7 +86,7 @@ internal sealed partial class ProfileStore : IDisposable
             {
                 return "profiles.json has an error, so the editor can't save. Fix it in a text editor first.";
             }
-            catch (IOException ex)
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
                 return ex.Message;
             }
@@ -148,7 +148,7 @@ internal sealed partial class ProfileStore : IDisposable
             var message = ex.Message.Split(" | LineNumber:")[0];
             Error = ex.LineNumber is long line ? $"Line {line + 1}: {message}" : message;
         }
-        catch (IOException ex)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             Profiles = [];
             Error = ex.Message;
@@ -160,14 +160,14 @@ internal sealed partial class ProfileStore : IDisposable
 
     private static string ReadWithRetry(string filePath)
     {
-        // The file may still be locked by the editor that just saved it.
+        // The file may still be locked by the editor that just saved it, or be part-way through being replaced.
         for (var attempt = 1; ; attempt++)
         {
             try
             {
                 return File.ReadAllText(filePath);
             }
-            catch (IOException) when (attempt < 5 && File.Exists(filePath))
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException && attempt < 5 && File.Exists(filePath))
             {
                 Thread.Sleep(100);
             }
