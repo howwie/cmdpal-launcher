@@ -7,6 +7,17 @@ namespace HowWieYoong.CmdPalLauncher.Tests;
 public class TerminalCommandLineTests
 {
     [Fact]
+    public void ParseTabs_ReadsBackEscapedSemicolons()
+    {
+        var tab = new TerminalTab { Title = "Build; Test", Directory = @"D:\a;b", Profile = "c;d", Command = "cd x; npm run dev" };
+        var arguments = AppLauncher.BuildTerminalArguments(new AppEntry { Type = "terminal", Tabs = [tab] });
+
+        var parsed = Assert.Single(TerminalCommandLine.ParseTabs(arguments, out _));
+
+        Assert.Equal((tab.Title, tab.Directory, tab.Profile, tab.Command), (parsed.Title, parsed.Directory, parsed.Profile, parsed.Command));
+    }
+
+    [Fact]
     public void ParsesTabsWithAllOptions()
     {
         var tabs = TerminalCommandLine.ParseTabs(

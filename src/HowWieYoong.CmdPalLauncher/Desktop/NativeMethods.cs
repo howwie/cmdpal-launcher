@@ -9,6 +9,7 @@ internal static unsafe partial class NativeMethods
     public const int GWL_EXSTYLE = -20;
     public const long WS_EX_TOOLWINDOW = 0x80;
     public const uint GW_OWNER = 4;
+    public const uint CLSCTX_INPROC_SERVER = 1;
     public const int SW_MAXIMIZE = 3;
     public const int SW_SHOWMINNOACTIVE = 7;
     public const int SW_RESTORE = 9;
@@ -38,6 +39,19 @@ internal static unsafe partial class NativeMethods
         public int Top;
         public int Right;
         public int Bottom;
+    }
+
+    /// <summary>Only the part needed for a 32-bit integer; the padding makes it the size of the real union.</summary>
+    [StructLayout(LayoutKind.Sequential)]
+    public struct VARIANT
+    {
+        public ushort vt;
+        public ushort wReserved1;
+        public ushort wReserved2;
+        public ushort wReserved3;
+        public int lVal;
+        public int padding;
+        public nint record;
     }
 
     [StructLayout(LayoutKind.Sequential)]
@@ -143,6 +157,9 @@ internal static unsafe partial class NativeMethods
         public fixed char monitorFriendlyDeviceName[64];
         public fixed char monitorDevicePath[128];
     }
+
+    [LibraryImport("ole32.dll")]
+    public static partial int CoCreateInstance(in System.Guid rclsid, nint pUnkOuter, uint dwClsContext, in System.Guid riid, out nint ppv);
 
     [LibraryImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]

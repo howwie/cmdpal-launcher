@@ -80,7 +80,7 @@ internal sealed partial class ProfileStore : IDisposable
             ProfilesFile file;
             try
             {
-                file = JsonSerializer.Deserialize(ReadWithRetry(FilePath), ProfilesJsonContext.Default.ProfilesFile) ?? new ProfilesFile();
+                file = Parse(ReadWithRetry(FilePath));
             }
             catch (JsonException)
             {
@@ -136,8 +136,7 @@ internal sealed partial class ProfileStore : IDisposable
                 return false;
             }
 
-            var file = JsonSerializer.Deserialize(json, ProfilesJsonContext.Default.ProfilesFile);
-            Profiles = file?.Profiles ?? [];
+            Profiles = Parse(json).Profiles;
             Error = null;
         }
         catch (JsonException ex)
@@ -156,6 +155,62 @@ internal sealed partial class ProfileStore : IDisposable
 
         _loadedJson = json;
         return true;
+    }
+
+    /// <summary>
+    /// Reads profiles.json. A null where a value is needed is valid JSON, so it's reported here as an error like any
+    /// other, rather than crashing whatever uses it later.
+    /// </summary>
+    private static ProfilesFile Parse(string json)
+    {
+        var file = JsonSerializer.Deserialize(json, ProfilesJsonContext.Default.ProfilesFile) ?? new ProfilesFile();
+        file.Profiles ??= [];
+        if (FindNull(file) is { } path)
+        {
+            throw new JsonException($"{path} can't be null.");
+        }
+
+        return file;
+    }
+
+    /// <summary>The JSON path of the first required value that's null, or null when there are none.</summary>
+    private static string? FindNull(ProfilesFile file)
+    {
+        for (var i = 0; i < file.Profiles.Count; i++)
+        {
+            var profile = file.Profiles[i];
+            var path = $"$.profiles[{i}]";
+            if (profile is null)
+            {
+                return path;
+            }
+
+            if (profile.Name is null)
+            {
+                return $"{path}.name";
+            }
+
+            if (profile.Apps is null)
+            {
+                return $"{path}.apps";
+            }
+
+            for (var j = 0; j < profile.Apps.Count; j++)
+            {
+                var app = profile.Apps[j];
+                if (app is null)
+                {
+                    return $"{path}.apps[{j}]";
+                }
+
+                if (app.Tabs?.IndexOf(null!) is >= 0 and var tab)
+                {
+                    return $"{path}.apps[{j}].tabs[{tab}]";
+                }
+            }
+        }
+
+        return null;
     }
 
     private static string ReadWithRetry(string filePath)

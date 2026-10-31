@@ -140,7 +140,8 @@ internal sealed unsafe class Win32Desktop : IDesktop
                 GetCommandLine(process),
                 GetAppUserModelId(process),
                 path is null ? null : GetFileDescription(path),
-                string.Equals(window.ProcessName, "explorer", StringComparison.OrdinalIgnoreCase) ? ExplorerFolders.For(window) : null);
+                string.Equals(window.ProcessName, "explorer", StringComparison.OrdinalIgnoreCase) ? ExplorerFolders.For(window) : null,
+                string.Equals(window.ProcessName, "WindowsTerminal", StringComparison.OrdinalIgnoreCase) ? TerminalTabNames.For(window.Handle) : null);
         }
         finally
         {

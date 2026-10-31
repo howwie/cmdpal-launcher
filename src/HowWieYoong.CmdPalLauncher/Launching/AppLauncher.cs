@@ -187,29 +187,28 @@ internal static class AppLauncher
 
             if (!string.IsNullOrWhiteSpace(tab.Profile))
             {
-                builder.Append(" -p ").Append(Quote(tab.Profile));
+                builder.Append(" -p ").Append(TerminalValue(tab.Profile));
             }
 
             if (!string.IsNullOrWhiteSpace(tab.Directory))
             {
-                builder.Append(" -d ").Append(Quote(Expand(tab.Directory)));
+                builder.Append(" -d ").Append(TerminalValue(Expand(tab.Directory)));
             }
 
             if (!string.IsNullOrWhiteSpace(tab.Title))
             {
                 // Without --suppressApplicationTitle the shell renames the tab as soon as it starts.
-                builder.Append(" --title ").Append(Quote(tab.Title)).Append(" --suppressApplicationTitle");
+                builder.Append(" --title ").Append(TerminalValue(tab.Title)).Append(" --suppressApplicationTitle");
             }
 
             if (!string.IsNullOrWhiteSpace(tab.Color))
             {
-                builder.Append(" --tabColor ").Append(Quote(tab.Color));
+                builder.Append(" --tabColor ").Append(TerminalValue(tab.Color));
             }
 
             if (!string.IsNullOrWhiteSpace(tab.Command))
             {
-                // wt treats a bare ";" as the start of the next subcommand.
-                builder.Append(' ').Append(Expand(tab.Command).Replace(";", "\\;", StringComparison.Ordinal));
+                builder.Append(' ').Append(EscapeSemicolons(Expand(tab.Command)));
             }
         }
 
@@ -224,6 +223,11 @@ internal static class AppLauncher
     private static string Expand(string value) => Environment.ExpandEnvironmentVariables(value);
 
     private static string Quote(string value) => CommandLine.Quote(value);
+
+    private static string TerminalValue(string value) => Quote(EscapeSemicolons(value));
+
+    /// <summary>wt treats any ";" as the start of the next subcommand, even inside quotes, unless it's written "\;".</summary>
+    private static string EscapeSemicolons(string value) => value.Replace(";", "\\;", StringComparison.Ordinal);
 }
 
 /// <summary>Where a new Windows Terminal window should open, in screen pixels.</summary>

@@ -1,3 +1,4 @@
+using System.Linq;
 using HowWieYoong.CmdPalLauncher.Desktop;
 using HowWieYoong.CmdPalLauncher.Profiles;
 using HowWieYoong.CmdPalLauncher.Tests.Helpers;
@@ -173,6 +174,73 @@ public class WindowCaptureTests
     }
 
     [Fact]
+    public void Terminal_HandedOverFromWt_UsesTheWindowTitle()
+    {
+        var window = _desktop.AddWindow("WindowsTerminal", "Build; Test");
+
+        var captured = Capture(window, new ProcessDetails(CommandLine: "WindowsTerminal.exe -Embedding"));
+
+        Assert.Contains("\"title\": \"Build; Test\"", captured.Entry);
+        Assert.DoesNotContain("Embedding", captured.Entry);
+        Assert.Contains(captured.Notes, n => n.Contains("only found by name", System.StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Terminal_HandedOverFromWt_ListsEveryTabName()
+    {
+        var window = _desktop.AddWindow("WindowsTerminal", "Second");
+
+        var captured = Capture(window, new ProcessDetails(CommandLine: "WindowsTerminal.exe -Embedding", TabNames: ["First", "Second"]));
+
+        Assert.Equal(["First", "Second"], Tabs(captured).Select(t => t.Title));
+    }
+
+    [Fact]
+    public void Terminal_TabAddedLater_KeepsTheStartedTabAndAddsTheName()
+    {
+        var window = _desktop.AddWindow("WindowsTerminal");
+
+        var captured = Capture(window, new ProcessDetails(CommandLine: "wt.exe --title API -d D:\\api", TabNames: ["API", "New tab"]));
+
+        var tabs = Tabs(captured);
+        Assert.Equal(("API", @"D:\api"), (tabs[0].Title, tabs[0].Directory));
+        Assert.Equal(("New tab", null), (tabs[1].Title, tabs[1].Directory));
+        Assert.Contains(captured.Notes, n => n.Contains("only found by name", System.StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Terminal_TabClosedLater_LeavesItOut()
+    {
+        var window = _desktop.AddWindow("WindowsTerminal");
+
+        var captured = Capture(window, new ProcessDetails(CommandLine: "wt.exe --title A ; new-tab --title B", TabNames: ["B"]));
+
+        Assert.Equal("B", Assert.Single(Tabs(captured)).Title);
+    }
+
+    [Fact]
+    public void Terminal_SameNumberOfTabs_KeepsWhatItWasStartedWith()
+    {
+        var window = _desktop.AddWindow("WindowsTerminal");
+
+        var captured = Capture(window, new ProcessDetails(CommandLine: "wt.exe -p Ubuntu", TabNames: ["shell prompt"]));
+
+        var tab = Assert.Single(Tabs(captured));
+        Assert.Null(tab.Title);
+        Assert.Equal("Ubuntu", tab.Profile);
+    }
+
+    [Fact]
+    public void Terminal_PlainWindow_DoesNotFixTheShellsNameAsATitle()
+    {
+        var window = _desktop.AddWindow("WindowsTerminal");
+
+        var captured = Capture(window, new ProcessDetails(CommandLine: "WindowsTerminal.exe", TabNames: ["PowerShell"]));
+
+        Assert.Contains("\"tabs\": []", captured.Entry);
+    }
+
+    [Fact]
     public void Terminal_StartedWithoutTabs_HasAnEmptyList()
     {
         var window = _desktop.AddWindow("WindowsTerminal", maximized: true);
@@ -251,4 +319,7 @@ public class WindowCaptureTests
 
     private CapturedWindow Capture(WindowInfo window, ProcessDetails details) =>
         WindowCapture.Capture(window, details, _desktop.Monitors, Folders);
+
+    private static System.Collections.Generic.List<TerminalTab> Tabs(CapturedWindow captured) =>
+        System.Text.Json.JsonSerializer.Deserialize(captured.Entry, ProfilesJsonContext.Default.AppEntry)!.Tabs!;
 }

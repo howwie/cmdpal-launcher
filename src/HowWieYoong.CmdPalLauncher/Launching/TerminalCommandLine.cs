@@ -99,19 +99,19 @@ internal static class TerminalCommandLine
             switch (option.ToLowerInvariant())
             {
                 case "-p" or "--profile":
-                    tab.Profile = value;
+                    tab.Profile = Unescape(value);
                     i += 2;
                     continue;
                 case "-d" or "--startingdirectory":
-                    tab.Directory = value;
+                    tab.Directory = Unescape(value);
                     i += 2;
                     continue;
                 case "--title":
-                    tab.Title = value;
+                    tab.Title = Unescape(value);
                     i += 2;
                     continue;
                 case "--tabcolor":
-                    tab.Color = value;
+                    tab.Color = Unescape(value);
                     i += 2;
                     continue;
                 case "--colorscheme":
@@ -131,12 +131,15 @@ internal static class TerminalCommandLine
     }
 
     /// <summary>
-    /// A token of a tab's command, as profiles.json holds it: "\;" becomes ";" again, because
+    /// A value as profiles.json holds it: "\;" becomes ";" again, because
     /// <see cref="AppLauncher.BuildTerminalArguments"/> escapes semicolons when launching.
     /// </summary>
+    private static string? Unescape(string? value) => value?.Replace("\\;", ";", StringComparison.Ordinal);
+
+    /// <summary>A token of a tab's command, as profiles.json holds it.</summary>
     private static string CommandToken(string token)
     {
-        token = token.Replace("\\;", ";", StringComparison.Ordinal);
+        token = Unescape(token)!;
         return token.Length > 0 && !token.Any(c => char.IsWhiteSpace(c) || c == '"') ? token : CommandLine.Quote(token);
     }
 }

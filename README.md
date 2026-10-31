@@ -161,7 +161,7 @@ Saving from the editor rewrites `profiles.json`:
 
 - **Comments are lost**, because the JSON library can't keep them. Before each save, the previous version is copied to `profiles.json.bak`, with older ones in `profiles.json.bak1` to `profiles.json.bak9`. The last version you wrote by hand, comments included, stays in `profiles.json.handwritten.bak`.
 - **Settings the editor doesn't know about are kept**, and settings that aren't set are left out.
-- **Edits made by hand since the editor last loaded the file are kept too**, because each save re-reads `profiles.json` first. If the file has a JSON error, the editor won't save until you fix it in a text editor.
+- **Edits made by hand since the editor last loaded the file are kept too**, because each save re-reads `profiles.json` first. If the file has a JSON error, or a `null` where a profile, name, app list, app or tab is needed, the editor won't save until you fix it in a text editor.
 
 ## profiles.json
 
@@ -288,12 +288,13 @@ How each part is found:
 Some apps are handled specially:
 
 - **File Explorer:** explorer.exe's command line doesn't say which folder is open, so the folder is read from Explorer itself and used as `arguments`. With several tabs, it uses the tab shown in the window title. Places without a folder path, such as Home or This PC, get no `arguments`.
-- **Windows Terminal:** captured as `"type": "terminal"`. Terminal keeps the `wt` command line it was started with, so its tabs (title, folder, profile, command, colour) are rebuilt from that. Tabs or windows opened after Terminal started aren't included, and split panes are left out.
+- **Windows Terminal:** captured as `"type": "terminal"`. Terminal keeps the `wt` command line it was started with, so its tabs (title, folder, profile, command, colour) are rebuilt from that. Tabs or windows opened after Terminal started aren't included, and split panes are left out. The names of the window's open tabs are read from the window itself, so tabs you opened or closed later are accounted for, in order. A tab found this way has only its name, because Terminal doesn't reveal anything else about it. The same goes for every tab in a window that `wt` handed to an already running Terminal, which has no command line to read. Remove a title if the shell should set it.
 - **Store apps** (WhatsApp, Claude, Calculator…): their exe inside `WindowsApps` can't be started directly, so `path` becomes `shell:AppsFolder\<app ID>`, without arguments. For older UWP apps hosted by `ApplicationFrameHost`, the app inside the frame is used.
 
 What can't be captured:
 
 - **The working directory.** Windows only records the folder a process is in now, not the one it started in, and many apps change it. Add `workingDirectory` yourself if an app needs it.
+- **The folder and command of Windows Terminal tabs added through its UI**, or of any tab in a window `wt` handed to a running Terminal. Only the tab's name can be read, so add its `directory`, `profile`, `command` and `color` yourself.
 - **Apps running as administrator.** Their command line can't be read from a normal process. You get an entry with an empty `path` to fill in.
 - **Arguments that only made sense once,** such as a file the app was opened with. Check `arguments` before saving.
 
