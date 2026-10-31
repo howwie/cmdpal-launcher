@@ -140,7 +140,7 @@ They don't start processes or touch real windows. `AppLauncher` makes its proces
 2. Zips each one with `install.ps1` and the licence.
 3. Publishes them as a GitHub release. The notes list the commits since the previous release (`build/Release-Notes.ps1`), then the install steps. GitHub's own generated notes only list merged pull requests, which would miss changes pushed straight to `main`.
 
-Releases are versioned `0.1.<workflow run number>`, e.g. tag `v0.1.42`. To move to `0.2` or `1.0`, change `VERSION` in the workflow.
+`version.txt` holds the first two parts of the version, and each release adds one to the last part, e.g. `v0.1.5` then `v0.1.6`. To move to `0.2` or `1.0`, change `version.txt` and push: the next release is `v0.2.0` or `v1.0.0`. Only ever raise it, because Windows won't update an installed package to a lower version, so the release fails if it's lower than the latest one.
 
 Pushes that only change Markdown files or `LICENSE` don't run the workflow, so they don't create a release. To push any other change without releasing it, put `[skip ci]` in the commit message.
 

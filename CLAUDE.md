@@ -36,6 +36,7 @@ deploy\x64\CmdPalLauncher.exe -windows                           # monitors + ca
     - Two SDK details: `FormContent.SubmitForm(inputs, data)` receives the pressed button's `data`, and `IconText` shows Segoe Fluent glyphs as `\uXXXX` codes, because text boxes can't draw them.
 - `test/HowWieYoong.CmdPalLauncher.Tests/`: xUnit v3 on Microsoft.Testing.Platform (opted in via `global.json`).
 - `build/Release-Notes.ps1`: writes a release's notes from the commits since the previous `v*` tag, so commit subjects become the changelog. Write them for users.
+- `build/Next-Version.ps1`: works out the next release's version from `version.txt` and the release tags.
 - `build/Build-Package.ps1`: builds a registrable package folder. `build/install.ps1` registers one; it ships in the release zips and `deploy.ps1` uses it with `-InPlace`.
 
 ## Conventions
@@ -59,6 +60,6 @@ deploy\x64\CmdPalLauncher.exe -windows                           # monitors + ca
 
 ## Releases
 
-**Every push to `main` publishes a public GitHub release** (`.github/workflows/build.yml`: tests, then x64 and ARM64 zips, tagged `v0.1.<run number>`). The exception is a push that only changes Markdown files or `LICENSE`, which doesn't run the workflow at all. Pull requests only run the tests. Don't push code changes to `main` unless a release is intended, and confirm first. To push a change that shouldn't release, such as workflow-only edits, put `[skip ci]` in the commit message.
+**Every push to `main` publishes a public GitHub release** (`.github/workflows/build.yml`: tests, then x64 and ARM64 zips, tagged with the next version from `build/Next-Version.ps1`: `version.txt` holds major.minor, and the patch is the latest tag for it plus one, so changing it to `1.0` makes the next release `v1.0.0`). The exception is a push that only changes Markdown files or `LICENSE`, which doesn't run the workflow at all. Pull requests only run the tests. Don't push code changes to `main` unless a release is intended, and confirm first. To push a change that shouldn't release, such as workflow-only edits, put `[skip ci]` in the commit message.
 
 `.github/copilot-instructions.md`, `.github/instructions/` and `.github/skills/` are the template's Copilot notes. They're gitignored but are a useful reference for the Command Palette API, which ships without docs.
