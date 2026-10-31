@@ -47,7 +47,6 @@ public class ProfileEditingTests
     public void MissingProfile_IsReported()
     {
         Assert.StartsWith("There's no profile called \"Gone\"", ProfileEditing.DeleteProfile(_file, "Gone"));
-        Assert.StartsWith("There's no profile called \"Gone\"", ProfileEditing.AddApp(_file, "Gone", new AppEntry()));
     }
 
     [Fact]

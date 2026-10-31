@@ -127,6 +127,41 @@ public class WindowPlacementTests
     }
 
     [Fact]
+    public void WindowTitle_MatchesATitleThatChangesAfterTheWindowOpens()
+    {
+        _runner.OnStart = _ => _desktop.RenameWindowLater(5, _desktop.AddWindow("app", "New Tab").Handle, "App - Main");
+
+        var failures = Launch(new AppEntry { Path = "app.exe", WindowTitle = "main", Monitor = new MonitorSelector(2, null) });
+
+        Assert.Empty(failures);
+        Assert.Equal(_desktop.Windows.Single().Handle, _desktop.Placed[0].Handle);
+    }
+
+    [Fact]
+    public void WindowOpenedBeforeItsProcessIsExpected_IsNotClaimedByALaterApp()
+    {
+        _runner.OnStart = info =>
+        {
+            if (info.FileName == "first.exe")
+            {
+                _desktop.AddWindow("first");
+                _desktop.AddWindow("second", "Unrelated");
+            }
+            else
+            {
+                _desktop.AddWindow("second", "Ours");
+            }
+        };
+
+        Launch(
+            new AppEntry { Path = "first.exe", Monitor = new MonitorSelector(2, null) },
+            new AppEntry { Path = "second.exe", Monitor = new MonitorSelector(2, null), DelayMs = 300 });
+
+        var unrelated = _desktop.Windows.Single(w => w.Title == "Unrelated").Handle;
+        Assert.DoesNotContain(_desktop.Placed, p => p.Handle == unrelated);
+    }
+
+    [Fact]
     public void WindowThatNeverAppears_TimesOutWithAMessage()
     {
         _runner.OnStart = _ => _desktop.AddWindow("something-else");

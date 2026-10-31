@@ -45,7 +45,7 @@ public partial class CmdPalLauncherCommandsProvider : CommandProvider
                 Subtitle = "Add, change and reorder profiles and their apps",
                 MoreCommands = [new CommandContextItem(new OpenProfilesFileCommand(_store.FilePath)) { Title = "Open profiles.json" }],
             },
-            new CommandItem(_windowsPage) { Title = "Capture window position", Subtitle = "Copy an open window as a profile app entry" },
+            new CommandItem(_windowsPage) { Title = "Capture window", Subtitle = "Copy an open window as a profile app entry" },
         ];
     }
 }

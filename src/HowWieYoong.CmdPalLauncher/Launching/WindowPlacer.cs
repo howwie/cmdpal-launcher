@@ -104,7 +104,7 @@ internal sealed class WindowPlacer
         var windows = _desktop.GetWindows();
         foreach (var window in windows)
         {
-            if (!_knownWindows.Add(window.Handle))
+            if (_knownWindows.Contains(window.Handle))
             {
                 continue;
             }
@@ -112,8 +112,15 @@ internal sealed class WindowPlacer
             var pending = _pending.FirstOrDefault(p => p.Handle == 0 && Matches(p, window));
             if (pending is not null)
             {
+                _knownWindows.Add(window.Handle);
                 pending.Handle = window.Handle;
                 Place(pending.App, window);
+            }
+            else if (!_pending.Any(p => p.Handle == 0 && IsFromProcess(p, window)))
+            {
+                // A window from a process we're waiting on stays unknown, because its title may still change to the
+                // one we want. Any other window is ignored from now on, so an app started later can't claim it.
+                _knownWindows.Add(window.Handle);
             }
         }
 
@@ -144,8 +151,11 @@ internal sealed class WindowPlacer
         }
     }
 
+    private static bool IsFromProcess(PendingWindow pending, WindowInfo window) =>
+        string.Equals(window.ProcessName, pending.ProcessName, StringComparison.OrdinalIgnoreCase);
+
     private static bool Matches(PendingWindow pending, WindowInfo window) =>
-        string.Equals(window.ProcessName, pending.ProcessName, StringComparison.OrdinalIgnoreCase)
+        IsFromProcess(pending, window)
         && (string.IsNullOrEmpty(pending.App.WindowTitle) || window.Title.Contains(pending.App.WindowTitle, StringComparison.OrdinalIgnoreCase));
 
     private void Place(AppEntry app, WindowInfo window)

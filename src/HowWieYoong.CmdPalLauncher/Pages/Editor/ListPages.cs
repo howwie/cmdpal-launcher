@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text.Json;
 using HowWieYoong.CmdPalLauncher.Commands;
 using HowWieYoong.CmdPalLauncher.Desktop;
 using HowWieYoong.CmdPalLauncher.Profiles;
@@ -79,79 +78,5 @@ internal sealed partial class ProfileEditorPage : ListPage, IRefreshable
                 Subtitle = $"{_store.FilePath}. Saving from the editor drops comments; the previous version goes to profiles.json.bak",
             },
         ];
-    }
-}
-
-/// <summary>Lists open windows; picking one adds a captured app entry for it to the profile.</summary>
-internal sealed partial class AddFromWindowPage : ListPage
-{
-    private const string PaletteProcess = "Microsoft.CmdPal.UI";
-
-    private readonly ProfileStore _store;
-    private readonly IDesktop _desktop;
-    private readonly ProfileFormPage _profile;
-
-    public AddFromWindowPage(ProfileStore store, IDesktop desktop, ProfileFormPage profile)
-    {
-        _store = store;
-        _desktop = desktop;
-        _profile = profile;
-        Title = "Add from an open window";
-        Name = "Open";
-        Icon = EditorIcons.Window;
-        PlaceholderText = "Search windows";
-        ShowDetails = true;
-    }
-
-    public override IListItem[] GetItems()
-    {
-        var monitors = _desktop.GetMonitors();
-        return _desktop.GetWindows()
-            .Where(w => !w.IsMinimized && !string.Equals(w.ProcessName, PaletteProcess, StringComparison.OrdinalIgnoreCase))
-            .Select(window =>
-            {
-                var captured = WindowCapture.Capture(window, _desktop.GetProcessDetails(window), monitors);
-                return (IListItem)new ListItem(new DelegateCommand("Add to profile", EditorIcons.Add, () => Add(captured)))
-                {
-                    Title = window.Title,
-                    Subtitle = window.ProcessName,
-                    Details = new Details { Title = window.Title, Body = $"```json\n{captured.Entry}\n```\n" + string.Concat(captured.Notes.Select(n => $"\n- {n}")) },
-                };
-            })
-            .ToArray();
-    }
-
-    private CommandResult Add(CapturedWindow captured)
-    {
-        AppEntry? app;
-        try
-        {
-            app = JsonSerializer.Deserialize(captured.Entry, ProfilesJsonContext.Default.AppEntry);
-        }
-        catch (JsonException ex)
-        {
-            return EditorResults.Failed($"Couldn't read the captured window: {ex.Message}");
-        }
-
-        if (app is null)
-        {
-            return EditorResults.Failed("Couldn't read the captured window.");
-        }
-
-        var index = -1;
-        var error = _store.Update(file =>
-        {
-            index = ProfileEditing.Find(file, _profile.ProfileName)?.Apps.Count ?? -1;
-            return ProfileEditing.AddApp(file, _profile.ProfileName, app);
-        });
-        if (error is not null)
-        {
-            return EditorResults.Failed(error);
-        }
-
-        // Show the new app open when the form is back on screen.
-        _profile.Expand(index);
-        _profile.Redraw();
-        return EditorResults.SavedAndBack($"Added {app.Name ?? "the app"}");
     }
 }

@@ -16,6 +16,8 @@ internal sealed record ProfileCardAction(string Name, int App = -1, int Tab = -1
     public const string Save = "save";
     public const string AddApp = "addApp";
     public const string AddTerminal = "addTerminal";
+    public const string AddWindow = "addWindow";
+    public const string ToggleAll = "toggleAll";
     public const string MoveApp = "moveApp";
     public const string DuplicateApp = "duplicateApp";
     public const string DeleteApp = "deleteApp";
@@ -83,8 +85,11 @@ internal sealed record ProfileCardLayout(int AppCount, IReadOnlyList<int> TabCou
 /// </summary>
 internal static class ProfileCard
 {
+    private const string WindowInput = "add_window";
+
     /// <param name="iconPreview">Turns an icon into an image URL to show beside the Icon field, or null for none.</param>
-    public static string Template(LaunchProfile profile, IReadOnlyList<MonitorInfo> monitors, IReadOnlySet<int> expanded, Func<string?, string?>? iconPreview = null)
+    /// <param name="windows">Open windows to offer as new apps, if any.</param>
+    public static string Template(LaunchProfile profile, IReadOnlyList<MonitorInfo> monitors, IReadOnlySet<int> expanded, Func<string?, string?>? iconPreview = null, IReadOnlyList<WindowInfo>? windows = null)
     {
         var body = new List<JsonObject?> { Card.Heading("Profile") };
         body.AddRange(Card.Section("p_", WithIconPreview(ProfileForm.Fields(profile), iconPreview?.Invoke(profile.Icon))));
@@ -100,12 +105,25 @@ internal static class ProfileCard
             body.Add(AppSection(profile.Apps[i], i, monitors, expanded.Contains(i)));
         }
 
+        if (windows is { Count: > 0 })
+        {
+            // On the form rather than a page of its own, because only a form button can save what's been typed.
+            body.Add(Card.Heading("Add from an open window"));
+            body.Add(Card.Choice(WindowInput, "Window", string.Empty, [("Choose a window", string.Empty), .. windows.Select(WindowChoice)]));
+            body.Add(Card.Buttons(Card.Submit("Add this window", new ProfileCardAction(ProfileCardAction.AddWindow).ToData())));
+        }
+
         return Card.Form(
             body,
             Card.Submit("Save", new ProfileCardAction(ProfileCardAction.Save).ToData()),
             Card.Submit("Add app", new ProfileCardAction(ProfileCardAction.AddApp).ToData()),
-            Card.Submit("Add Windows Terminal", new ProfileCardAction(ProfileCardAction.AddTerminal).ToData()));
+            Card.Submit("Add Windows Terminal", new ProfileCardAction(ProfileCardAction.AddTerminal).ToData()),
+            Card.Submit("Show or hide all apps", new ProfileCardAction(ProfileCardAction.ToggleAll).ToData()));
     }
+
+    /// <summary>The window picked in the "Add from an open window" dropdown, if any.</summary>
+    public static nint? ChosenWindow(string inputs) =>
+        long.TryParse(FormValues.Parse(inputs).Text(WindowInput), NumberStyles.Integer, CultureInfo.InvariantCulture, out var handle) ? (nint)handle : null;
 
     /// <summary>
     /// Copies every input on the form into the profile called <paramref name="profileName"/> in <paramref name="file"/>.
@@ -164,7 +182,8 @@ internal static class ProfileCard
     }
 
     /// <summary>Does what the button asked for, after <see cref="ApplyInputs"/>. <paramref name="expand"/> is the app to show open afterwards.</summary>
-    public static string? Perform(LaunchProfile profile, ProfileCardAction action, out int? expand)
+    /// <param name="window">The app to add for <see cref="ProfileCardAction.AddWindow"/>.</param>
+    public static string? Perform(LaunchProfile profile, ProfileCardAction action, out int? expand, AppEntry? window = null)
     {
         expand = null;
         var apps = profile.Apps;
@@ -174,6 +193,7 @@ internal static class ProfileCard
         switch (action.Name)
         {
             case ProfileCardAction.Save:
+            case ProfileCardAction.ToggleAll:
                 return null;
 
             case ProfileCardAction.AddApp:
@@ -183,6 +203,11 @@ internal static class ProfileCard
 
             case ProfileCardAction.AddTerminal:
                 apps.Add(new AppEntry { Type = "terminal", Tabs = [] });
+                expand = apps.Count - 1;
+                return null;
+
+            case ProfileCardAction.AddWindow when window is not null:
+                apps.Add(window);
                 expand = apps.Count - 1;
                 return null;
         }
@@ -250,6 +275,9 @@ internal static class ProfileCard
     }
 
     public static string BodyId(int appIndex) => $"a{appIndex}_body";
+
+    private static (string Title, string Value) WindowChoice(WindowInfo window) =>
+        ($"{window.Title} ({window.ProcessName})", ((long)window.Handle).ToString(CultureInfo.InvariantCulture));
 
     /// <summary>Puts the icon picture to the right of the Icon field. The picture only changes when the form is redrawn, e.g. after saving.</summary>
     private static List<JsonObject?> WithIconPreview(List<JsonObject?> fields, string? previewUrl)

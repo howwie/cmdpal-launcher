@@ -90,6 +90,23 @@ public class AppLauncherTests
     }
 
     [Fact]
+    public void CreateStartInfo_SkipIfRunning_ChecksTheTerminalProcessNotTheStub()
+    {
+        _runner.RunningProcesses.Add("WindowsTerminal");
+
+        Assert.Null(AppLauncher.CreateStartInfo(new AppEntry { Type = "terminal", SkipIfRunning = true }, _runner));
+    }
+
+    [Fact]
+    public void CreateStartInfo_SkipIfRunning_ChecksWindowProcess()
+    {
+        _runner.RunningProcesses.Add("WhatsApp");
+        var app = new AppEntry { Path = @"shell:AppsFolder\5319275A.WhatsAppDesktop_cv1g1gvanyjgm!App", WindowProcess = "WhatsApp", SkipIfRunning = true };
+
+        Assert.Null(AppLauncher.CreateStartInfo(app, _runner));
+    }
+
+    [Fact]
     public void CreateStartInfo_SkipIfRunning_StartsWhenNotRunning()
     {
         var app = new AppEntry { Path = "notepad.exe", SkipIfRunning = true };

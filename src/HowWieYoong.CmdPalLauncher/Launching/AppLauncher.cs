@@ -97,7 +97,7 @@ internal static class AppLauncher
             arguments = Expand(app.Arguments ?? string.Empty);
         }
 
-        if (app.SkipIfRunning && runner.IsRunning(Path.GetFileNameWithoutExtension(fileName)))
+        if (app.SkipIfRunning && runner.IsRunning(WindowProcessName(app, fileName)))
         {
             return null;
         }

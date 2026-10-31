@@ -14,11 +14,9 @@ internal static class EditorIcons
     public static readonly IconInfo Up = new("\uE74A");
     public static readonly IconInfo Down = new("\uE74B");
     public static readonly IconInfo Copy = new("\uE8C8");
-    public static readonly IconInfo Settings = new("\uE713");
     public static readonly IconInfo App = new("\uE737");
     public static readonly IconInfo Terminal = new("\uE756");
     public static readonly IconInfo Tab = new("\uE7C3");
-    public static readonly IconInfo Window = new("\uE7F4");
     public static readonly IconInfo Warning = new("\uE7BA");
 }
 

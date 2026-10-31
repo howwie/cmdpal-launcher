@@ -179,8 +179,8 @@ internal static class TabForm
         tab.Command = values.Text("command");
         tab.Color = values.Text("color");
 
-        return new[] { tab.Title, tab.Directory, tab.Profile, tab.Command }.All(v => v is null)
-            ? "Fill in at least a title, directory, profile or command."
+        return new[] { tab.Title, tab.Directory, tab.Profile, tab.Command, tab.Color }.All(v => v is null)
+            ? "Fill in at least a title, directory, profile, command or colour."
             : null;
     }
 }

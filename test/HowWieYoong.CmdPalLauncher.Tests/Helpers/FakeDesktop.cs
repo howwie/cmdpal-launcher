@@ -9,6 +9,7 @@ namespace HowWieYoong.CmdPalLauncher.Tests.Helpers;
 internal sealed class FakeDesktop : IDesktop
 {
     private readonly List<(int AfterCalls, WindowInfo Window)> _later = [];
+    private readonly List<(int AfterCalls, nint Handle, string Title)> _renames = [];
     private nint _nextHandle = 100;
     private int _getWindowsCalls;
 
@@ -40,6 +41,10 @@ internal sealed class FakeDesktop : IDesktop
     public void AddWindowLater(int afterCalls, string processName, string title = "Window") =>
         _later.Add((_getWindowsCalls + afterCalls, new WindowInfo(_nextHandle++, processName, title, new PixelRect(100, 100, 800, 600), false, false)));
 
+    /// <summary>Changes a window's title once <see cref="GetWindows"/> has been called <paramref name="afterCalls"/> more times.</summary>
+    public void RenameWindowLater(int afterCalls, nint handle, string title) =>
+        _renames.Add((_getWindowsCalls + afterCalls, handle, title));
+
     public IReadOnlyList<MonitorInfo> GetMonitors() => Monitors;
 
     public IReadOnlyList<WindowInfo> GetWindows()
@@ -49,6 +54,13 @@ internal sealed class FakeDesktop : IDesktop
         {
             Windows.Add(due.Window);
             _later.Remove(due);
+        }
+
+        foreach (var due in _renames.Where(r => r.AfterCalls <= _getWindowsCalls).ToList())
+        {
+            var index = Windows.FindIndex(w => w.Handle == due.Handle);
+            Windows[index] = Windows[index] with { Title = due.Title };
+            _renames.Remove(due);
         }
 
         return Windows.ToList();
